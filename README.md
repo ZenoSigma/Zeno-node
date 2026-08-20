@@ -40,6 +40,18 @@ Bộ công cụ mở rộng (Custom Nodes Pack) chuyên nghiệp cho **ComfyUI**
   - **Bội số 32 an toàn cho VAE:** Tự động làm tròn chiều dài cạnh lớn nhất (`longest_side`) và cạnh phụ về bội số của 32.
   - **Xử lý Image / Mask đồng bộ:** Hỗ trợ 3 chế độ `stretch` (kéo dãn), `crop` (cắt giữa), `letterbox` (thêm viền đen) với các thuật toán nội suy `bicubic`, `bilinear`, `nearest`, `area`.
 
+## 📥 Cài đặt (Installation)
+
+### Cách 1: Qua Git Clone (Khuyên dùng)
+```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/ZenoSigma/Zeno-node.git
+pip install -r Zeno-node/requirements.txt
+```
+
+### Cách 2: Qua ComfyUI Manager
+- Mở ComfyUI ➔ Chọn **Manager** ➔ **Custom Nodes Manager** ➔ Tìm kiếm `Zeno-node` hoặc chọn **Install via Git URL** và dán `https://github.com/ZenoSigma/Zeno-node.git`.
+
 ---
 
 ## 🚀 Cấu trúc thư mục Pack
