@@ -1,65 +1,71 @@
 # Zeno-node (ComfyUI Custom Nodes Pack)
 
-Bộ công cụ mở rộng (Custom Nodes Pack) chuyên nghiệp cho **ComfyUI**, tập trung vào tối ưu quy trình xử lý Latent và lưu ảnh:
-1. **Zeno - Advanced Save Image**: Tự động chuẩn hoá và đặt tên file thông minh (Model ➔ Timestamp ➔ Custom text), nhận diện model tự động từ workflow graph, phân loại thư mục theo Model/Date, bảo toàn 100% metadata workflow và hỗ trợ chuông thông báo.
-2. **Zeno - Smart Ratio Latent Generator**: Tự động tính toán kích thước Latent theo tỷ lệ chuẩn, ép về bội số 32, hỗ trợ transform (Stretch / Crop / Letterbox) trực tiếp cho Image và Mask đầu vào.
+A professional extension pack for **ComfyUI** designed to streamline latent generation and smart image saving workflows:
+
+1. **Zeno - Advanced Save Image**: Intelligent file naming (Model ➔ Timestamp ➔ Custom text), automatic model detection from the workflow graph, flexible subfolder organization (by Date/Model), full workflow metadata retention, and audio notifications.
+2. **Zeno - Smart Ratio Latent Generator**: Standard aspect ratio latent generation with automatic VAE-safe rounding (multiples of 32), and built-in image/mask transformation (Stretch / Crop / Letterbox).
 
 ---
 
-## 📦 Danh sách Node trong Pack
+## 📦 Nodes Included
 
 ### 1. Zeno - Advanced Save Image
 - **Category:** `Zeno/Image`
 - **Class:** `AdvancedSaveImage`
-- **Tính năng nổi bật:**
-  - **Thứ tự ưu tiên đặt tên:** Model Name (tự động nhận diện từ workflow) ➔ Timestamp (thời gian tạo) ➔ Custom Text (chữ tuỳ chỉnh).
-  - **Chuẩn hoá định dạng:** Chỉ viết hoa chữ cái đầu tiên của toàn bộ tên file, tất cả các ký tự còn lại là chữ thường. Loại bỏ ký tự đặc biệt, lọc sạch số trong tên model.
-  - **Quản lý thư mục:** Lưu tự do theo Ngày (`YYYY-MM-DD`), theo Model hoặc thư mục tuỳ chỉnh.
-  - **Định dạng:** Mặc định lưu PNG chuẩn lossless chất lượng cao nhất kèm đầy đủ Workflow PNGInfo metadata.
-  - **Chuông thông báo:** Tuỳ chọn phát chuông âm thanh (`play_sound_on_finish`) khi render và lưu ảnh xong.
+- **Key Features:**
+  - **Smart Naming Hierarchy:** Model Name (auto-detected from workflow) ➔ Timestamp ➔ Custom Text.
+  - **Consistent Formatting:** Clean capitalization (first letter capitalized, all following letters lowercase). Strips special characters and redundant digits from model names.
+  - **Subfolder Organization:** Group output images by Date (`YYYY-MM-DD`), Model Name, or a Custom Subfolder path.
+  - **Lossless PNG & Metadata:** Preserves full PNGInfo workflow metadata for drag-and-drop workflow reloading.
+  - **Completion Chime:** Optional audio alert (`play_sound_on_finish`) when generation and saving complete.
 
-| Tên tham số | Kiểu | Mặc định | Ý nghĩa |
+| Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `images` | `IMAGE` | *(bắt buộc)* | Tensor hình ảnh đầu vào |
-| `include_model_name` | `BOOLEAN` | `True` | Bật/tắt tự động lấy tên model gắn vào đầu tên file |
-| `include_timestamp` | `BOOLEAN` | `True` | Bật/tắt gắn thời gian tạo |
-| `timestamp_format` | `COMBO` | `%Y%m%d_%H%M%S` | Định dạng thời gian tạo |
-| `custom_text` | `STRING` | `""` | Văn bản/ghi chú tuỳ chỉnh người dùng điền |
-| `subfolder_mode` | `COMBO` | `None` | Chế độ tạo thư mục con phân loại |
-| `custom_subfolder` | `STRING` | `""` | Tên thư mục con khi chọn mode `Custom Subfolder` |
-| `save_workflow_metadata` | `BOOLEAN` | `True` | Lưu metadata workflow vào PNG |
-| `play_sound_on_finish` | `BOOLEAN` | `False` | Bật/tắt phát chuông thông báo khi hoàn thành xuất ảnh |
+| `images` | `IMAGE` | *(required)* | Input image tensor list |
+| `include_model_name` | `BOOLEAN` | `True` | Automatically detect and prepend model/checkpoint name |
+| `include_timestamp` | `BOOLEAN` | `True` | Append timestamp to filename |
+| `timestamp_format` | `COMBO` | `%Y%m%d_%H%M%S` | Timestamp format string |
+| `custom_text` | `STRING` | `""` | User-defined custom text, tags, or concepts |
+| `subfolder_mode` | `COMBO` | `None` | Subfolder grouping mode |
+| `custom_subfolder` | `STRING` | `""` | Custom folder name (used when mode is `Custom Subfolder`) |
+| `save_workflow_metadata` | `BOOLEAN` | `True` | Embed ComfyUI workflow metadata in PNG files |
+| `play_sound_on_finish` | `BOOLEAN` | `False` | Play an audible notification chime when saving finishes |
 
 ---
 
 ### 2. Zeno - Smart Ratio Latent Generator
 - **Category:** `Zeno/Latent`
 - **Class:** `RatioLatentGenerator`
-- **Tính năng nổi bật:**
-  - **Hỗ trợ tỷ lệ chuẩn:** `1:1`, `5:4`, `4:3`, `3:2`, `16:9`, `21:9`, `2.35:1` hoặc tự động nhận diện tỷ lệ theo ảnh/mask đầu vào.
-  - **Bội số 32 an toàn cho VAE:** Tự động làm tròn chiều dài cạnh lớn nhất (`longest_side`) và cạnh phụ về bội số của 32.
-  - **Xử lý Image / Mask đồng bộ:** Hỗ trợ 3 chế độ `stretch` (kéo dãn), `crop` (cắt giữa), `letterbox` (thêm viền đen) với các thuật toán nội suy `bicubic`, `bilinear`, `nearest`, `area`.
+- **Key Features:**
+  - **Standard Aspect Ratios:** Supports `1:1`, `5:4`, `4:3`, `3:2`, `16:9`, `21:9`, `2.35:1`, or automatic ratio detection from input image/mask.
+  - **VAE-Safe Multiples of 32:** Automatically calculates and snaps dimensions to multiples of 32 to prevent VAE decode errors.
+  - **Synchronized Image / Mask Transformation:** Supports `stretch`, `crop` (center crop), and `letterbox` (padding) with interpolation methods (`bicubic`, `bilinear`, `nearest`, `area`).
 
-## 📥 Cài đặt (Installation)
+---
 
-### Cách 1: Qua Git Clone (Khuyên dùng)
+## 📥 Installation
+
+### Method 1: Git Clone (Recommended)
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/ZenoSigma/Zeno-node.git
 pip install -r Zeno-node/requirements.txt
 ```
 
-### Cách 2: Qua ComfyUI Manager
-- Mở ComfyUI ➔ Chọn **Manager** ➔ **Custom Nodes Manager** ➔ Tìm kiếm `Zeno-node` hoặc chọn **Install via Git URL** và dán `https://github.com/ZenoSigma/Zeno-node.git`.
+### Method 2: ComfyUI Manager
+- Open ComfyUI ➔ Click **Manager** ➔ **Custom Nodes Manager** ➔ Search for `Zeno-node` (or click **Install via Git URL** and paste `https://github.com/ZenoSigma/Zeno-node.git`).
 
 ---
 
-## 🚀 Cấu trúc thư mục Pack
+## 🚀 Repository Structure
 
 ```bash
 Zeno-node/
 ├── __init__.py
 ├── README.md
+├── LICENSE
+├── requirements.txt
+├── .gitignore
 ├── nodes/
 │   ├── __init__.py
 │   ├── advanced_save_image.py
@@ -70,8 +76,14 @@ Zeno-node/
 
 ---
 
-## 🧪 Kiểm thử (Testing)
+## 🧪 Testing
 
 ```bash
 python -m unittest discover tests
 ```
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

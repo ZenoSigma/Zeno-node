@@ -15,7 +15,7 @@ DELIMITER = "_"
 
 
 def play_alert_sound():
-    """Phát âm thanh chuông thông báo khi hoàn thành xuất ảnh."""
+    """Plays an alert chime when image generation/saving completes."""
     try:
         if sys.platform == "win32":
             import winsound
@@ -29,13 +29,13 @@ def play_alert_sound():
 
 def auto_detect_model_name(prompt: dict) -> str:
     """
-    Tự động truy vết và trích xuất tên Checkpoint/Model từ đồ thị thực thi ComfyUI (prompt dict).
-    Hỗ trợ cả node CheckpointLoader tiêu chuẩn và Zeno Multi Checkpoint Switch (động theo slot ON).
+    Automatically inspects and extracts the Checkpoint/Model name from the ComfyUI execution graph (prompt dict).
+    Supports standard CheckpointLoader nodes as well as dynamic switch nodes.
     """
     if not prompt or not isinstance(prompt, dict):
         return ""
 
-    # 1. Kiểm tra node CheckpointSwitch (quét toàn bộ các slot động đang bật ON)
+    # 1. Check CheckpointSwitch nodes (scan active ON slots)
     for node_id, node_data in prompt.items():
         if isinstance(node_data, dict):
             class_type = node_data.get("class_type", "")
@@ -54,7 +54,7 @@ def auto_detect_model_name(prompt: dict) -> str:
                     if k.startswith("model_") and v and v != "None":
                         return v
 
-    # 2. Tìm trong các node class loader chuyên dụng tiêu chuẩn
+    # 2. Search standard dedicated loader node classes
     ckpt_keys = ["ckpt_name", "unet_name", "model_name", "checkpoint", "ckpt_filename"]
     target_classes = [
         "CheckpointLoaderSimple",
@@ -76,7 +76,7 @@ def auto_detect_model_name(prompt: dict) -> str:
                     if isinstance(val, str) and val.strip():
                         return val
 
-    # 3. Tìm trong bất kỳ node nào có input chứa ckpt_name / unet_name
+    # 3. Search any node containing ckpt_name / unet_name inputs
     for node_id, node_data in prompt.items():
         if isinstance(node_data, dict):
             inputs = node_data.get("inputs", {})
@@ -90,11 +90,11 @@ def auto_detect_model_name(prompt: dict) -> str:
 
 def sanitize_model_name(text: str, delimiter: str = DELIMITER) -> str:
     """
-    Chuẩn hoá riêng cho tên Model:
-    - Loại bỏ đường dẫn thư mục nếu có (ví dụ 'SDXL/model.safetensors' -> 'model')
-    - Loại bỏ đuôi extension (.safetensors, .ckpt, .pt, .bin).
-    - Loại bỏ toàn bộ chữ số (0-9), chỉ giữ lại phần text.
-    - Loại bỏ ký tự đặc biệt, dọn dẹp các dấu gạch/khoảng trắng thừa.
+    Sanitize model names:
+    - Strips directory paths (e.g. 'SDXL/model.safetensors' -> 'model').
+    - Removes extensions (.safetensors, .ckpt, .pt, .bin).
+    - Strips all digits (0-9) to retain clean alpha naming.
+    - Removes special characters, consolidating delimiters/whitespace.
     """
     if not text:
         return ""
@@ -110,8 +110,8 @@ def sanitize_model_name(text: str, delimiter: str = DELIMITER) -> str:
 
 def sanitize_filename_component(text: str, delimiter: str = DELIMITER) -> str:
     """
-    Loại bỏ ký tự đặc biệt cho các thành phần thông thường (Timestamp, Custom text).
-    Giữ lại chữ cái, chữ số, gạch dưới và gạch ngang.
+    Sanitize general components (Timestamp, Custom text).
+    Retains alphanumeric characters, hyphens, and underscores.
     """
     if not text:
         return ""
@@ -123,8 +123,8 @@ def sanitize_filename_component(text: str, delimiter: str = DELIMITER) -> str:
 
 def normalize_filename_case(text: str) -> str:
     """
-    Chuẩn hoá chữ hoa/thường:
-    Chỉ viết hoa chữ cái đầu tiên của toàn bộ tên file, tất cả các ký tự còn lại là chữ thường.
+    Capitalizes only the very first character of the entire filename prefix,
+    keeping all subsequent characters lowercase.
     """
     if not text:
         return ""
@@ -138,26 +138,26 @@ class AdvancedSaveImage:
         self.type = "output"
         self.prefix_append = ""
 
-    DESCRIPTION = "Node lưu ảnh nâng cao tự động nhận diện tên Model/Checkpoint, định dạng timestamp, phân loại thư mục con và phát âm thanh khi hoàn thành."
+    DESCRIPTION = "Advanced image saving node with automatic Model/Checkpoint detection, smart timestamp formatting, subfolder organization, workflow metadata retention, and audio alert."
 
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
-                "images": ("IMAGE", {"tooltip": "Danh sách hình ảnh cần lưu và hiển thị preview trên node."}),
-                # 1. Model name (ở đầu tên ảnh, 100% tự động nhận diện từ workflow)
+                "images": ("IMAGE", {"tooltip": "List of images to save and preview on the node."}),
+                # 1. Model name (automatically extracted from execution graph)
                 "include_model_name": ("BOOLEAN", {
                     "default": True,
                     "label_on": "Enable",
                     "label_off": "Disable",
-                    "tooltip": "Tự động nhận diện và thêm tên Model/Checkpoint vào đầu tên file ảnh."
+                    "tooltip": "Automatically detect and prepend the Model/Checkpoint name to the filename."
                 }),
-                # 2. Thời điểm tạo
+                # 2. Timestamp
                 "include_timestamp": ("BOOLEAN", {
                     "default": True,
                     "label_on": "Enable",
                     "label_off": "Disable",
-                    "tooltip": "Thêm mốc thời gian vào tên file ảnh theo định dạng được chọn."
+                    "tooltip": "Append a timestamp to the filename using the selected format."
                 }),
                 "timestamp_format": ([
                     "%Y%m%d_%H%M%S",       # e.g. 20260816_113000
@@ -166,16 +166,16 @@ class AdvancedSaveImage:
                     "%H%M%S",              # e.g. 113000
                 ], {
                     "default": "%Y%m%d_%H%M%S",
-                    "tooltip": "Định dạng hiển thị thời gian trong tên file (VD: YYYYMMDD_HHMMSS)."
+                    "tooltip": "Timestamp formatting pattern (e.g. YYYYMMDD_HHMMSS)."
                 }),
-                # 3. Custom text do người dùng điền
+                # 3. User custom text
                 "custom_text": ("STRING", {
                     "default": "",
                     "multiline": False,
-                    "placeholder": "Tên tuỳ chỉnh / Tag / Ghi chú...",
-                    "tooltip": "Văn bản tùy chỉnh bổ sung vào tên file (VD: tên nhân vật, concept, tag)."
+                    "placeholder": "Custom tag / concept / notes...",
+                    "tooltip": "Optional custom text or tags to append to the filename (e.g. character, style, concept)."
                 }),
-                # Cấu hình thư mục con
+                # Subfolder configuration
                 "subfolder_mode": ([
                     "None",
                     "By Date (YYYY-MM-DD)",
@@ -183,24 +183,24 @@ class AdvancedSaveImage:
                     "Custom Subfolder"
                 ], {
                     "default": "None",
-                    "tooltip": "Chế độ gom nhóm lưu ảnh vào thư mục con (theo ngày, theo tên model hoặc thư mục tùy chọn)."
+                    "tooltip": "Subfolder organization mode (by date, by model name, or custom subfolder path)."
                 }),
                 "custom_subfolder": ("STRING", {
                     "default": "",
-                    "tooltip": "Tên thư mục con tùy chỉnh (chỉ có hiệu lực khi chọn 'Custom Subfolder')."
+                    "tooltip": "Custom subfolder name (only active when subfolder_mode is set to 'Custom Subfolder')."
                 }),
                 "save_workflow_metadata": ("BOOLEAN", {
                     "default": True,
                     "label_on": "Yes",
                     "label_off": "No",
-                    "tooltip": "Nhúng thông tin prompt và workflow vào metadata file PNG để có thể kéo thả nạp lại workflow sau này."
+                    "tooltip": "Embed prompt and workflow metadata into PNG files for easy reloading."
                 }),
-                # 4. Chuông thông báo khi lưu ảnh hoàn tất
+                # 4. Audio chime
                 "play_sound_on_finish": ("BOOLEAN", {
                     "default": False,
                     "label_on": "Enable",
                     "label_off": "Disable",
-                    "tooltip": "Phát chuông thông báo âm thanh khi toàn bộ batch ảnh đã được lưu xong."
+                    "tooltip": "Play an audible alert chime when all images in the batch are saved."
                 }),
             },
             "hidden": {
@@ -211,14 +211,14 @@ class AdvancedSaveImage:
 
     RETURN_TYPES = ("IMAGE", "STRING")
     RETURN_NAMES = ("images", "file_paths")
-    OUTPUT_TOOLTIPS = ("Danh sách ảnh đã lưu", "Đường dẫn tuyệt đối đến các file ảnh vừa lưu trên máy")
+    OUTPUT_TOOLTIPS = ("Saved image tensor list", "Absolute file paths of the saved images on disk")
     FUNCTION = "save_images"
     OUTPUT_NODE = True
     CATEGORY = "Zeno/Image"
 
     @classmethod
     def VALIDATE_INPUTS(s, **kwargs):
-        # Cho phép bỏ qua lỗi enum nếu load từ workflow cũ
+        # Allow bypassing enum errors when loading legacy workflows
         return True
 
     def build_filename_prefix(
@@ -231,7 +231,7 @@ class AdvancedSaveImage:
     ) -> str:
         parts = []
 
-        # 1. Model Name (Tự động nhận diện)
+        # 1. Model Name (Automatic detection)
         if include_model_name and prompt is not None:
             detected_model = auto_detect_model_name(prompt)
             clean_model = sanitize_model_name(detected_model, delimiter=DELIMITER)
@@ -258,7 +258,7 @@ class AdvancedSaveImage:
 
         raw_prefix = DELIMITER.join(parts)
 
-        # Dọn dẹp delimiter lặp lại
+        # Clean repeated delimiters
         escaped_del = re.escape(DELIMITER)
         cleaned_prefix = re.sub(f"{escaped_del}+", DELIMITER, raw_prefix).strip(DELIMITER)
 
@@ -296,7 +296,7 @@ class AdvancedSaveImage:
         prompt=None,
         extra_pnginfo=None
     ):
-        # 1. Tạo filename prefix chuẩn hoá
+        # 1. Build standardized filename prefix
         filename_prefix = self.build_filename_prefix(
             include_model_name=include_model_name,
             include_timestamp=include_timestamp,
@@ -305,26 +305,26 @@ class AdvancedSaveImage:
             prompt=prompt
         )
 
-        # 2. Xử lý Subfolder (tự động fallback nếu subfolder_mode mang giá trị lạ từ workflow cũ)
+        # 2. Resolve subfolder path (automatic fallback for unknown legacy values)
         subfolder = self.resolve_subfolder(subfolder_mode, custom_subfolder, prompt=prompt)
         if subfolder:
             full_prefix = os.path.join(subfolder, filename_prefix)
         else:
             full_prefix = filename_prefix
 
-        # 3. Lấy đường dẫn lưu file an toàn từ ComfyUI folder_paths
+        # 3. Obtain safe output save path from ComfyUI folder_paths
         full_output_folder, filename, counter, subfolder_res, filename_prefix_res = \
             folder_paths.get_save_image_path(full_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
 
         results = []
         saved_file_paths = []
 
-        # 4. Lưu từng ảnh trong batch (mặc định định dạng PNG lossless chất lượng gốc)
+        # 4. Save each image in batch (lossless PNG format preserving workflow metadata)
         for idx, image in enumerate(images):
             i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
-            # Metadata Workflow
+            # Workflow Metadata
             metadata = None
             if save_workflow_metadata and not comfy.cli_args.args.disable_metadata:
                 metadata = PngInfo()

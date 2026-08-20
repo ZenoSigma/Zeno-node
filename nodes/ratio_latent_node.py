@@ -4,7 +4,7 @@ import comfy.model_management
 
 
 class RatioLatentGenerator:
-    DESCRIPTION = "Tạo Empty Latent và tính toán kích thước Width/Height chuẩn tỉ lệ (bội số 32), hỗ trợ tự động scale/crop ảnh và mask đầu vào theo tỉ lệ đã chọn."
+    DESCRIPTION = "Generates an Empty Latent with standardized aspect ratio dimensions (multiples of 32), with optional automatic image and mask scaling/cropping."
 
     @classmethod
     def INPUT_TYPES(s):
@@ -15,52 +15,52 @@ class RatioLatentGenerator:
                     "min": 1024,
                     "max": 4000,
                     "step": 32,
-                    "tooltip": "Kích thước cạnh dài nhất (tự động làm tròn về bội số của 32)."
+                    "tooltip": "Longest dimension size (automatically rounded to a multiple of 32)."
                 }),
                 "aspect_ratio": (
                     ["1:1", "5:4", "4:3", "3:2", "16:9", "21:9", "2.35:1"],
-                    {"tooltip": "Tỉ lệ khung hình mục tiêu (VD: 1:1, 16:9, 3:2...)."}
-                ),
+                    {"tooltip": "Target aspect ratio (e.g. 1:1, 16:9, 3:2...)."
+                }),
                 "swap_dimensions": ("BOOLEAN", {
                     "default": False,
-                    "tooltip": "Đảo ngược chiều khung hình (chuyển đổi giữa Ngang và Dọc)."
+                    "tooltip": "Swap width and height to toggle between Landscape and Portrait."
                 }),
                 "batch_size": ("INT", {
                     "default": 1,
                     "min": 1,
                     "max": 64,
                     "step": 1,
-                    "tooltip": "Số lượng latent tạo ra trong một batch."
+                    "tooltip": "Number of latent samples generated in a single batch."
                 }),
                 "crop_mode": (
                     ["letterbox", "crop", "stretch"],
-                    {"tooltip": "Chế độ xử lý khi có input ảnh/mask: letterbox (thêm viền), crop (cắt vừa khung), stretch (kéo giãn)."}
-                ),
+                    {"tooltip": "Processing mode for input image/mask: letterbox (pad borders), crop (center crop), stretch (scale to fit)."
+                }),
                 "method": (
                     ["bicubic", "bilinear", "nearest", "area"],
-                    {"tooltip": "Thuật toán nội suy hình ảnh khi resize (bicubic, bilinear, nearest, area)."}
-                ),
+                    {"tooltip": "Interpolation algorithm for resizing (bicubic, bilinear, nearest, area)."
+                }),
             },
             "optional": {
-                "image": ("IMAGE", {"tooltip": "Ảnh đầu vào (tùy chọn). Sẽ được tự động resize/crop theo kích thước và tỉ lệ đã tính."}),
-                "mask": ("MASK", {"tooltip": "Mask đầu vào (tùy chọn). Sẽ được tự động resize/crop theo kích thước và tỉ lệ đã tính."}),
+                "image": ("IMAGE", {"tooltip": "Optional input image. Automatically resized/cropped to match target aspect ratio and dimensions."}),
+                "mask": ("MASK", {"tooltip": "Optional input mask. Automatically resized/cropped to match target aspect ratio and dimensions."}),
             }
         }
 
     RETURN_TYPES = ("INT", "INT", "LATENT", "IMAGE", "MASK")
     RETURN_NAMES = ("WIDTH", "HEIGHT", "EMPTY_LATENT", "IMAGE", "MASK")
     OUTPUT_TOOLTIPS = (
-        "Chiều rộng (Width) bội số 32",
-        "Chiều cao (Height) bội số 32",
+        "Width (multiple of 32)",
+        "Height (multiple of 32)",
         "Empty Latent Tensor",
-        "Ảnh đã transform theo tỉ lệ",
-        "Mask đã transform theo tỉ lệ"
+        "Transformed Image",
+        "Transformed Mask"
     )
     FUNCTION = "generate"
     CATEGORY = "Zeno/Latent"
 
     def generate(self, longest_side, aspect_ratio, swap_dimensions, batch_size, crop_mode, method, image=None, mask=None):
-        # 1. Xác định Tỷ lệ (Ratio) và Batch Size
+        # 1. Determine Ratio and Batch Size
         if image is not None:
             _, orig_h, orig_w, _ = image.shape
             w_ratio = float(orig_w)
@@ -83,11 +83,11 @@ class RatioLatentGenerator:
                 w_ratio, h_ratio = h_ratio, w_ratio
             output_batch = batch_size
 
-        # 2. Tự động ép số liệu về bội số của 32
+        # 2. Round longest dimension to multiple of 32
         optimal_longest = round(longest_side / 32) * 32
         optimal_longest = min(4000, max(1024, optimal_longest))
 
-        # 3. Tính toán cạnh còn lại
+        # 3. Calculate complementary dimension
         if w_ratio >= h_ratio:
             width = optimal_longest
             raw_height = (width * h_ratio) / w_ratio
@@ -100,7 +100,7 @@ class RatioLatentGenerator:
         width = max(256, width)
         height = max(256, height)
 
-        # 4. Sinh ra Empty Latent
+        # 4. Generate Empty Latent
         device = comfy.model_management.intermediate_device()
         latent = torch.zeros(
             [output_batch, 4, height // 8, width // 8],
@@ -108,7 +108,7 @@ class RatioLatentGenerator:
             dtype=comfy.model_management.intermediate_dtype(),
         )
 
-        # Helper function xử lý transform tensor BCHW (Stretch / Crop / Letterbox)
+        # Helper function to transform tensor BCHW (Stretch / Crop / Letterbox)
         def transform_tensor(tensor_bchw, target_h, target_w, pad_val=0.0):
             _, _, cur_h, cur_w = tensor_bchw.shape
 
@@ -149,7 +149,7 @@ class RatioLatentGenerator:
 
             return tensor_bchw
 
-        # 5. Xử lý Image Transform (nếu có input image)
+        # 5. Process Image Transform (if image provided)
         if image is not None:
             # ComfyUI Image Tensor shape: [B, H, W, C] -> PyTorch BCHW: [B, C, H, W]
             img = image.permute(0, 3, 1, 2)
@@ -158,9 +158,9 @@ class RatioLatentGenerator:
         else:
             out_image = torch.zeros([output_batch, height, width, 3])
 
-        # 6. Xử lý Mask Transform (nếu có input mask)
+        # 6. Process Mask Transform (if mask provided)
         if mask is not None:
-            # ComfyUI Mask Tensor shape: [B, H, W] hoặc [H, W] -> PyTorch BCHW: [B, 1, H, W]
+            # ComfyUI Mask Tensor shape: [B, H, W] or [H, W] -> PyTorch BCHW: [B, 1, H, W]
             if mask.ndim == 2:
                 m = mask.unsqueeze(0).unsqueeze(0)
             elif mask.ndim == 3:
@@ -169,12 +169,12 @@ class RatioLatentGenerator:
                 m = mask
             
             m = transform_tensor(m, height, width, pad_val=0.0)
-            # Trả về shape chuẩn ComfyUI MASK: [B, H, W]
+            # Return standard ComfyUI MASK shape: [B, H, W]
             out_mask = m.squeeze(1)
         else:
             out_mask = torch.zeros([output_batch, height, width])
 
-        # 7. Metadata Latent
+        # 7. Latent Metadata
         empty_latent = {
             "samples": latent,
             "downscale_ratio_spacial": 8,
