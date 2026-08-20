@@ -63,6 +63,7 @@ pip install -r Zeno-node/requirements.txt
 Zeno-node/
 ├── __init__.py
 ├── README.md
+├── AGENTS.md
 ├── LICENSE
 ├── requirements.txt
 ├── .gitignore
@@ -81,6 +82,15 @@ Zeno-node/
 ```bash
 python -m unittest discover tests
 ```
+
+---
+
+## 🤖 Contributing & AI Guidelines
+
+See [AGENTS.md](AGENTS.md) for full details on:
+- Tech Stack & Dependencies
+- Data Architecture & Tensor Specifications
+- Branching strategy (`feat/`, `fix/`) and Conventional Commit message rules
 
 ---
 
