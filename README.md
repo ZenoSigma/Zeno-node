@@ -64,9 +64,16 @@ Zeno-node/
 ├── __init__.py
 ├── README.md
 ├── AGENTS.md
+├── CLAUDE.md
+├── .cursorrules
+├── pyproject.toml
 ├── LICENSE
 ├── requirements.txt
 ├── .gitignore
+├── docs/
+│   ├── architecture.md
+│   ├── api_spec.md
+│   └── algorithm.md
 ├── nodes/
 │   ├── __init__.py
 │   ├── advanced_save_image.py
@@ -85,12 +92,13 @@ python -m unittest discover tests
 
 ---
 
-## 🤖 Contributing & AI Guidelines
+## 📚 Technical Documentation & AI Guidelines
 
-See [AGENTS.md](AGENTS.md) for full details on:
-- Tech Stack & Dependencies
-- Data Architecture & Tensor Specifications
-- Branching strategy (`feat/`, `fix/`) and Conventional Commit message rules
+Detailed architectural specifications and multi-AI development protocols:
+- [Architecture & Data Pipeline](docs/architecture.md) - Pipeline diagrams, layer separation, execution flows.
+- [API & Node Specification](docs/api_spec.md) - Input widgets, hidden parameters, output signatures.
+- [Algorithm & Math Principles](docs/algorithm.md) - VAE-safe snap-to-32 calculations, spatial interpolation transforms.
+- [AI Operator Guidelines](AGENTS.md) - 6-step AI onboarding sequence, branch management (`feat/`, `fix/`), Conventional Commits.
 
 ---
 

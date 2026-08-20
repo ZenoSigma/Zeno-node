@@ -4,11 +4,24 @@ Guidelines and architectural specifications for AI agents, developers, and contr
 
 ---
 
+## 🧭 AI Onboarding & Context Reading Order (6-Step Protocol)
+
+When an AI agent or contributor starts working on this repository, you **MUST** read files in the following strict sequential order:
+
+1. **Step 1 - Rules & Boundaries:** Read `AGENTS.md` / `CLAUDE.md` / `.cursorrules` (Never delete try/except blocks, never commit directly to `main`, always create feature branches).
+2. **Step 2 - Architecture & Data Flow:** Read `docs/architecture.md`, `docs/api_spec.md`, and `docs/algorithm.md` (Understand tensor shapes and data pipelines before writing code).
+3. **Step 3 - Dependencies & Config:** Read `requirements.txt` and `pyproject.toml`.
+4. **Step 4 - Entrypoint & Node Mappings:** Read `__init__.py` and `nodes/__init__.py`.
+5. **Step 5 - Core Logic & Nodes:** Read `nodes/advanced_save_image.py` and `nodes/ratio_latent_node.py`.
+6. **Step 6 - Verification & Tests:** Read `tests/test_naming.py` and run tests (`python -m unittest discover tests`).
+
+---
+
 ## 1. 🛠️ Tech Stack & Dependencies
 
 - **Language:** Python 3.10+
 - **Core Frameworks & Libraries:**
-  - **PyTorch (`torch`, `torch.nn.functional`):** Tensor operations, GPU/CPU device memory management, interpolation, and spatial transformations.
+  - **PyTorch (`torch`, `torch.nn.functional`):** Tensor operations, GPU/CPU memory management, interpolation, and spatial transformations.
   - **Torchvision:** Computer vision primitives and image transforms.
   - **NumPy (`numpy`):** Array transformations, clipping, and numerical conversions.
   - **Pillow (`PIL.Image`, `PIL.PngImagePlugin.PngInfo`):** Lossless PNG serialization and metadata encapsulation.
@@ -70,8 +83,12 @@ pip install -r Zeno-node/requirements.txt
 
 All AI agents and human contributors MUST adhere to the following workflow:
 
-### A. Branch Management
-- **Never commit directly to `main` for non-trivial modifications.**
+### A. Core Operational Invariants
+- **DO NOT remove logic, parameters, edge cases, error handling (try/catch), or defensive checks.**
+- **DO NOT commit directly to `main` branch for non-trivial modifications.**
+- Always preserve full backward compatibility with existing ComfyUI workflows.
+
+### B. Branch Management
 - Always create a dedicated working branch for changes:
   ```bash
   git checkout -b <type>/<short-description>
@@ -81,7 +98,7 @@ All AI agents and human contributors MUST adhere to the following workflow:
   # git checkout -b docs/update-agents-spec
   ```
 
-### B. Commit Message Conventions
+### C. Commit Message Conventions
 - Write structured commit messages following Conventional Commits:
   - `feat: <summary>` - New functionality
   - `fix: <summary>` - Bug fixes
@@ -91,7 +108,7 @@ All AI agents and human contributors MUST adhere to the following workflow:
   - `chore: <summary>` - Maintenance tasks
 - **Summary Requirement:** Always summarize what was changed, the rationale, and verify tests passed before requesting merge.
 
-### C. Merge Checklist
+### D. Merge Checklist
 1. All unit tests pass cleanly: `python -m unittest discover tests`.
 2. No unnecessary dependencies or cache artifacts (`__pycache__`, `.pyc`) committed.
 3. Code preserves full backward compatibility with ComfyUI nodes and existing workflows.

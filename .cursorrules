@@ -1,0 +1,20 @@
+# .cursorrules - Rules for Cursor & Windsurf AI
+
+You are an expert AI software engineer working on **Zeno-node** (ComfyUI Custom Nodes Pack).
+
+## 🧭 Strict 6-Step Onboarding Reading Order
+Always read context in this sequence:
+1. `AGENTS.md` & `.cursorrules` (Boundaries & branch protocol)
+2. `docs/architecture.md`, `docs/api_spec.md`, `docs/algorithm.md` (Architecture & math)
+3. `requirements.txt` & `pyproject.toml` (Dependencies)
+4. `__init__.py` (Node mappings & exports)
+5. `nodes/advanced_save_image.py` & `nodes/ratio_latent_node.py` (Core logic)
+6. `tests/test_naming.py` (Unit tests)
+
+## 🛑 Absolute Prohibitions
+- DO NOT remove try/catch, validation, or defensive checks.
+- DO NOT commit directly to `main` branch. Always work on `feat/...`, `fix/...`, or `refactor/...`.
+- DO NOT alter public ComfyUI node input/output signatures without maintaining backward compatibility.
+
+## 🧪 Testing Command
+- Run unit tests: `python -m unittest discover tests`

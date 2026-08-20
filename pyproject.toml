@@ -1,0 +1,21 @@
+[project]
+name = "comfyui-zeno-node"
+description = "ComfyUI Custom Nodes Pack for smart ratio latent generation & advanced image saving with metadata"
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = [
+    "torch",
+    "torchvision",
+    "numpy",
+    "Pillow"
+]
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.urls]
+Repository = "https://github.com/ZenoSigma/Zeno-node"
+
+[tool.comfy]
+PublisherId = "zenosigma"
+DisplayName = "Zeno-node"
+Icon = ""
