@@ -74,6 +74,8 @@ function setupPromptLibraryNode(node) {
         flex-direction: column;
         gap: 8px;
         width: 100%;
+        height: 100%;
+        flex: 1 1 auto;
         box-sizing: border-box;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         font-size: 12px;
@@ -93,7 +95,8 @@ function setupPromptLibraryNode(node) {
         display: flex;
         flex-direction: column;
         gap: 8px;
-        max-height: 320px;
+        flex: 1 1 auto;
+        min-height: 120px;
         overflow-y: auto;
         padding-right: 4px;
         box-sizing: border-box;
@@ -110,7 +113,13 @@ function setupPromptLibraryNode(node) {
 
     const calculateDynamicHeight = () => {
         const count = node.promptSlots?.length || 1;
-        return Math.max(180, Math.min(520, count * 105 + 55));
+        return Math.max(180, count * 105 + 60);
+    };
+
+    const updateDynamicLayout = (size) => {
+        const currentH = (size && size[1]) || (node.size && node.size[1]) || 280;
+        const availableH = Math.max(120, currentH - 140);
+        listContainer.style.maxHeight = `${availableH}px`;
     };
 
     const updateNodeBounds = () => {
@@ -118,11 +127,12 @@ function setupPromptLibraryNode(node) {
         const currentW = (node.size && node.size[0]) || 400;
         const currentH = (node.size && node.size[1]) || 280;
         const targetW = Math.max(currentW, 400);
-        const targetH = Math.max(currentH, neededHeight + 70);
+        const targetH = Math.max(currentH, neededHeight + 75);
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
         }
+        updateDynamicLayout([targetW, targetH]);
         if (node.setDirtyCanvas) {
             node.setDirtyCanvas(true, true);
         }
@@ -257,6 +267,8 @@ function setupPromptLibraryNode(node) {
             row.appendChild(promptTextarea);
             listContainer.appendChild(row);
         });
+
+        updateDynamicLayout();
     };
 
     // Add Slot button
@@ -274,6 +286,7 @@ function setupPromptLibraryNode(node) {
         font-weight: 600;
         letter-spacing: 0.3px;
         box-sizing: border-box;
+        flex-shrink: 0;
         transition: all 0.2s ease;
     `;
     addBtn.addEventListener("mouseenter", () => {
@@ -320,21 +333,31 @@ function setupPromptLibraryNode(node) {
                 return calculateDynamicHeight();
             },
             getHeight() {
-                return calculateDynamicHeight();
+                const currentH = (node.size && node.size[1]) || calculateDynamicHeight() + 75;
+                return Math.max(160, currentH - 75);
             },
-            onResize() {
-                renderSlots();
+            onResize(size) {
+                updateDynamicLayout(size);
             }
         });
 
         if (domWidget) {
             domWidget.computeSize = (width) => {
-                return [width || 400, calculateDynamicHeight()];
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 75);
+                return [width || 400, Math.max(160, currentH - 75)];
             };
         }
     }
 
-    // 5. Reactive highlight when selected_index changes
+    // 5. Hook onResize on instance for instant layout updates
+    const origOnResize = node.onResize;
+    node.onResize = function (size) {
+        const res = origOnResize ? origOnResize.apply(this, arguments) : undefined;
+        updateDynamicLayout(size);
+        return res;
+    };
+
+    // 6. Reactive highlight when selected_index changes
     const selectedIndexWidget = node.widgets?.find((w) => w.name === "selected_index");
     if (selectedIndexWidget) {
         const origCallback = selectedIndexWidget.callback;
@@ -345,12 +368,16 @@ function setupPromptLibraryNode(node) {
         };
     }
 
-    // 6. External refresh hook
+    // 7. External refresh hook
     node.__zeno_refresh_slots = () => {
         parseFromWidget();
         renderSlots();
         syncToWidget();
         updateNodeBounds();
+    };
+
+    node.__zeno_update_layout = (size) => {
+        updateDynamicLayout(size);
     };
 
     // Initial render & sync
@@ -383,6 +410,15 @@ app.registerExtension({
             return r;
         };
 
+        const origOnResize = nodeType.prototype.onResize;
+        nodeType.prototype.onResize = function (size) {
+            const r = origOnResize ? origOnResize.apply(this, arguments) : undefined;
+            if (this.__zeno_update_layout) {
+                this.__zeno_update_layout(size);
+            }
+            return r;
+        };
+
         const origOnConfigure = nodeType.prototype.onConfigure;
         nodeType.prototype.onConfigure = function () {
             const r = origOnConfigure ? origOnConfigure.apply(this, arguments) : undefined;
@@ -393,3 +429,4 @@ app.registerExtension({
         };
     }
 });
+
