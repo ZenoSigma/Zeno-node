@@ -15,7 +15,7 @@ function setupPromptLibraryNode(node) {
     // Ensure LiteGraph positions widgets from top downwards
     node.widgets_up = true;
 
-    // 1. Locate and hide the raw slots_json storage widget
+    // 1. Locate and hide raw storage widgets (slots_json and selected_index)
     const slotsJsonWidget = node.widgets?.find((w) => w.name === "slots_json");
     if (slotsJsonWidget) {
         slotsJsonWidget.type = "hidden";
@@ -25,6 +25,18 @@ function setupPromptLibraryNode(node) {
             slotsJsonWidget.element.style.height = "0px";
             slotsJsonWidget.element.style.margin = "0px";
             slotsJsonWidget.element.style.padding = "0px";
+        }
+    }
+
+    const selectedIndexWidget = node.widgets?.find((w) => w.name === "selected_index");
+    if (selectedIndexWidget) {
+        selectedIndexWidget.type = "hidden";
+        selectedIndexWidget.computeSize = () => [0, 0];
+        if (selectedIndexWidget.element) {
+            selectedIndexWidget.element.style.display = "none";
+            selectedIndexWidget.element.style.height = "0px";
+            selectedIndexWidget.element.style.margin = "0px";
+            selectedIndexWidget.element.style.padding = "0px";
         }
     }
 
@@ -42,6 +54,14 @@ function setupPromptLibraryNode(node) {
             node.properties = {};
         }
         node.properties.slots_json = jsonStr;
+    };
+
+    const getSelectedIndex = () => {
+        let val = selectedIndexWidget?.value;
+        if (val === undefined && node.properties?.selected_index !== undefined) {
+            val = node.properties.selected_index;
+        }
+        return typeof val === "number" ? val : parseInt(val || "1", 10) || 1;
     };
 
     const parseFromWidget = () => {
@@ -99,11 +119,239 @@ function setupPromptLibraryNode(node) {
     // Isolate canvas events on the container (capture phase to block ComfyUI/LiteGraph canvas zoom)
     container.addEventListener("pointerdown", (e) => e.stopPropagation(), { capture: true });
     container.addEventListener("mousedown", (e) => e.stopPropagation(), { capture: true });
-    container.addEventListener("wheel", (e) => {
-        e.stopPropagation();
+
+    // Top Toolbar: Compact Selected Index Selector & Fit Button
+    const toolbar = document.createElement("div");
+    toolbar.className = "zeno-prompt-toolbar";
+    toolbar.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        background: rgba(20, 24, 33, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        padding: 5px 8px;
+        box-sizing: border-box;
+        flex-shrink: 0;
+    `;
+
+    const indexGroup = document.createElement("div");
+    indexGroup.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    `;
+
+    const indexLabel = document.createElement("span");
+    indexLabel.innerText = "Selected Slot:";
+    indexLabel.style.cssText = `
+        font-weight: 600;
+        font-size: 11px;
+        color: #94a3b8;
+        letter-spacing: 0.3px;
+    `;
+
+    const decBtn = document.createElement("button");
+    decBtn.innerText = "−";
+    decBtn.title = "Previous slot";
+    decBtn.style.cssText = `
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #f1f5f9;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: bold;
+        line-height: 1;
+        padding: 0;
+        transition: all 0.15s ease;
+    `;
+    decBtn.addEventListener("mouseenter", () => {
+        decBtn.style.background = "#2563eb";
+        decBtn.style.borderColor = "#3b82f6";
+    });
+    decBtn.addEventListener("mouseleave", () => {
+        decBtn.style.background = "#1e293b";
+        decBtn.style.borderColor = "#334155";
+    });
+
+    const indexInput = document.createElement("input");
+    indexInput.type = "number";
+    indexInput.min = "1";
+    indexInput.value = getSelectedIndex();
+    indexInput.setAttribute("data-capture-wheel", "true");
+    indexInput.style.cssText = `
+        width: 42px;
+        height: 22px;
+        background: #0f172a;
+        border: 1px solid #38bdf8;
+        border-radius: 4px;
+        color: #38bdf8;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+        outline: none;
+        box-sizing: border-box;
+        padding: 0 2px;
+        -moz-appearance: textfield;
+    `;
+    indexInput.addEventListener("keydown", (e) => e.stopPropagation());
+    indexInput.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
+
+    const incBtn = document.createElement("button");
+    incBtn.innerText = "+";
+    incBtn.title = "Next slot";
+    incBtn.style.cssText = `
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #f1f5f9;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: bold;
+        line-height: 1;
+        padding: 0;
+        transition: all 0.15s ease;
+    `;
+    incBtn.addEventListener("mouseenter", () => {
+        incBtn.style.background = "#2563eb";
+        incBtn.style.borderColor = "#3b82f6";
+    });
+    incBtn.addEventListener("mouseleave", () => {
+        incBtn.style.background = "#1e293b";
+        incBtn.style.borderColor = "#334155";
+    });
+
+    const countBadge = document.createElement("span");
+    countBadge.innerText = `/ ${node.promptSlots?.length || 1}`;
+    countBadge.style.cssText = `
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 500;
+    `;
+
+    const setIndexValue = (val) => {
+        const total = node.promptSlots?.length || 1;
+        const clamped = Math.max(1, Math.min(total, parseInt(val, 10) || 1));
+        indexInput.value = clamped;
+        if (selectedIndexWidget) {
+            selectedIndexWidget.value = clamped;
+            if (selectedIndexWidget.callback) {
+                selectedIndexWidget.callback(clamped);
+            }
+        }
+        if (!node.properties) node.properties = {};
+        node.properties.selected_index = clamped;
+        updateActiveSlotHighlight();
+    };
+
+    decBtn.addEventListener("click", (e) => {
         e.preventDefault();
-        listContainer.scrollTop += e.deltaY;
-    }, { capture: true, passive: false });
+        e.stopPropagation();
+        setIndexValue(getSelectedIndex() - 1);
+    });
+
+    incBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIndexValue(getSelectedIndex() + 1);
+    });
+
+    indexInput.addEventListener("change", (e) => {
+        setIndexValue(e.target.value);
+    });
+
+    indexGroup.appendChild(indexLabel);
+    indexGroup.appendChild(decBtn);
+    indexGroup.appendChild(indexInput);
+    indexGroup.appendChild(incBtn);
+    indexGroup.appendChild(countBadge);
+
+    // Fit Button (Fits node size to current slots without resetting any slot sizes)
+    const fitBtn = document.createElement("button");
+    fitBtn.innerText = "⛶ Fit Size";
+    fitBtn.title = "Tự động căn chỉnh kích thước node vừa khít các ô prompt hiện tại (không reset kích thước các ô)";
+    fitBtn.style.cssText = `
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        color: #38bdf8;
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.15s ease;
+        line-height: 1;
+    `;
+    fitBtn.addEventListener("mouseenter", () => {
+        fitBtn.style.background = "#0284c7";
+        fitBtn.style.borderColor = "#38bdf8";
+        fitBtn.style.color = "#ffffff";
+    });
+    fitBtn.addEventListener("mouseleave", () => {
+        fitBtn.style.background = "rgba(56, 189, 248, 0.12)";
+        fitBtn.style.borderColor = "rgba(56, 189, 248, 0.35)";
+        fitBtn.style.color = "#38bdf8";
+    });
+
+    const fitNodeToContent = () => {
+        // Read actual current DOM heights of each textarea without resetting anything!
+        const existingTextareas = listContainer.querySelectorAll("textarea");
+        existingTextareas.forEach((ta, idx) => {
+            if (node.promptSlots[idx] && ta.offsetHeight > 35) {
+                node.promptSlots[idx].height = ta.offsetHeight;
+            }
+        });
+
+        let totalSlotsHeight = 0;
+        const rows = listContainer.querySelectorAll(".zeno-slot-row");
+        if (rows.length > 0) {
+            rows.forEach((row, idx) => {
+                const ta = row.querySelector("textarea");
+                const taHeight = (ta && ta.offsetHeight > 35) ? ta.offsetHeight : ((node.promptSlots[idx]?.height) || 50);
+                totalSlotsHeight += (taHeight + 48);
+            });
+            totalSlotsHeight += (rows.length - 1) * 8;
+        } else {
+            totalSlotsHeight = 60;
+        }
+
+        const totalNeededHeight = 35 + 34 + 8 + totalSlotsHeight + 8 + 32 + 12;
+        const currentW = (node.size && node.size[0]) || 400;
+        const targetW = Math.max(400, currentW);
+        const targetH = Math.max(180, totalNeededHeight);
+
+        if (node.setSize) {
+            node.setSize([targetW, targetH]);
+        }
+        updateDynamicLayout([targetW, targetH]);
+        if (node.setDirtyCanvas) {
+            node.setDirtyCanvas(true, true);
+        }
+    };
+
+    fitBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fitNodeToContent();
+    });
+
+    toolbar.appendChild(indexGroup);
+    toolbar.appendChild(fitBtn);
 
     const listContainer = document.createElement("div");
     listContainer.className = "zeno-prompt-slots-list";
@@ -120,31 +368,31 @@ function setupPromptLibraryNode(node) {
     `;
 
     // Isolate wheel / scroll events from canvas zooming
+    container.addEventListener("wheel", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        listContainer.scrollTop += e.deltaY;
+    }, { capture: true, passive: false });
+
     listContainer.addEventListener("wheel", (e) => {
         e.stopPropagation();
         e.preventDefault();
         listContainer.scrollTop += e.deltaY;
     }, { capture: true, passive: false });
 
-    const getSelectedIndex = () => {
-        const selWidget = node.widgets?.find((w) => w.name === "selected_index");
-        const val = selWidget?.value;
-        return typeof val === "number" ? val : parseInt(val || "1", 10) || 1;
-    };
-
     const calculateDynamicHeight = () => {
         if (!node.promptSlots || node.promptSlots.length === 0) return 140;
-        let total = 45; // add button + padding
+        let total = 36 + 8 + 45; // toolbar (~36px) + gap (8px) + add button (32px) + padding
         node.promptSlots.forEach((s) => {
             const h = (typeof s.height === "number" && s.height > 30) ? s.height : 50;
-            total += h + 45; // topBar (~26px) + gap/padding (~19px) + textarea height
+            total += h + 56; // topBar + gap + textarea + padding + row gap
         });
         return Math.max(140, total);
     };
 
     const updateDynamicLayout = (size) => {
         const currentH = (size && size[1]) || (node.size && node.size[1]) || 280;
-        const availableH = Math.max(100, currentH - 65);
+        const availableH = Math.max(100, currentH - 40);
         if (domWidget && domWidget.element) {
             domWidget.element.style.height = `${availableH}px`;
         }
@@ -155,7 +403,7 @@ function setupPromptLibraryNode(node) {
         const currentW = (node.size && node.size[0]) || 400;
         const currentH = (node.size && node.size[1]) || 280;
         const targetW = Math.max(currentW, 400);
-        const targetH = Math.max(currentH, neededHeight + 65);
+        const targetH = Math.max(currentH, neededHeight + 40);
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
@@ -177,6 +425,13 @@ function setupPromptLibraryNode(node) {
 
         listContainer.innerHTML = "";
         const activeIndex = getSelectedIndex();
+
+        if (countBadge) {
+            countBadge.innerText = `/ ${node.promptSlots?.length || 1}`;
+        }
+        if (indexInput) {
+            indexInput.value = activeIndex;
+        }
 
         node.promptSlots.forEach((slot, index) => {
             const slotNumber = index + 1;
@@ -452,6 +707,12 @@ function setupPromptLibraryNode(node) {
 
     const updateActiveSlotHighlight = () => {
         const activeIndex = getSelectedIndex();
+        if (indexInput && indexInput.value != activeIndex) {
+            indexInput.value = activeIndex;
+        }
+        if (countBadge) {
+            countBadge.innerText = `/ ${node.promptSlots?.length || 1}`;
+        }
         const rows = listContainer.querySelectorAll(".zeno-slot-row");
         if (rows.length !== (node.promptSlots?.length || 0)) {
             renderSlots();
@@ -530,6 +791,7 @@ function setupPromptLibraryNode(node) {
         updateNodeBounds();
     });
 
+    container.appendChild(toolbar);
     container.appendChild(listContainer);
     container.appendChild(addBtn);
 
@@ -551,8 +813,8 @@ function setupPromptLibraryNode(node) {
                 return calculateDynamicHeight();
             },
             getHeight() {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 65);
-                return Math.max(120, currentH - 65);
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 40);
+                return Math.max(120, currentH - 40);
             },
             onResize(size) {
                 updateDynamicLayout(size);
@@ -561,8 +823,8 @@ function setupPromptLibraryNode(node) {
 
         if (domWidget) {
             domWidget.computeSize = (width) => {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 65);
-                return [width || 400, Math.max(120, currentH - 65)];
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 40);
+                return [width || 400, Math.max(120, currentH - 40)];
             };
         }
     }
@@ -576,7 +838,6 @@ function setupPromptLibraryNode(node) {
     };
 
     // 6. Reactive highlight when selected_index changes
-    const selectedIndexWidget = node.widgets?.find((w) => w.name === "selected_index");
     if (selectedIndexWidget) {
         const origCallback = selectedIndexWidget.callback;
         selectedIndexWidget.callback = function (val) {
