@@ -1,4 +1,13 @@
 import { app } from "../../scripts/app.js";
+import {
+    PROMPT_LIBRARY_LAYOUT,
+    calculateContainerHeight,
+    calculateDomWidgetHeight,
+    calculateNodeHeight,
+    calculateNodeWidth,
+    hideWidgetFromLayout,
+    measureUnscaledElementHeight,
+} from "./prompt_library_layout.mjs";
 
 /**
  * Zeno - Prompt Library Custom Node Frontend Extension
@@ -74,42 +83,44 @@ function highlightPromptText(raw) {
     return result;
 }
 
+const STORAGE_WIDGET_STYLE_ID = "zeno-prompt-library-storage-widget-style";
+
+function ensureStorageWidgetsStayOutOfLayout() {
+    if (document.getElementById(STORAGE_WIDGET_STYLE_ID)) return;
+
+    const style = document.createElement("style");
+    style.id = STORAGE_WIDGET_STYLE_ID;
+    style.textContent = `
+        /* Nodes 2.0 materializes backend widgets before this extension can mark
+           them hidden. Remove only PromptLibrary's two canvas-backed storage rows. */
+        .lg-node-widget:has(> [node-type="PromptLibrary"] > canvas) {
+            display: none !important;
+            min-height: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 function setupPromptLibraryNode(node) {
     if (!node || node.__zeno_initialized) {
         return;
     }
     node.__zeno_initialized = true;
+    ensureStorageWidgetsStayOutOfLayout();
 
     // Ensure LiteGraph positions widgets from top downwards starting right under header
     node.widgets_up = true;
-    node.widgets_start_y = 35;
+    node.widgets_start_y = PROMPT_LIBRARY_LAYOUT.WIDGET_START_Y;
 
     // 1. Locate and hide raw storage widgets (slots_json and selected_index)
     const slotsJsonWidget = node.widgets?.find((w) => w.name === "slots_json");
-    if (slotsJsonWidget) {
-        slotsJsonWidget.type = "hidden";
-        slotsJsonWidget.computeSize = () => [0, -4];
-        slotsJsonWidget.draw = () => {};
-        if (slotsJsonWidget.element) {
-            slotsJsonWidget.element.style.display = "none";
-            slotsJsonWidget.element.style.height = "0px";
-            slotsJsonWidget.element.style.margin = "0px";
-            slotsJsonWidget.element.style.padding = "0px";
-        }
-    }
+    hideWidgetFromLayout(slotsJsonWidget);
 
     const selectedIndexWidget = node.widgets?.find((w) => w.name === "selected_index");
-    if (selectedIndexWidget) {
-        selectedIndexWidget.type = "hidden";
-        selectedIndexWidget.computeSize = () => [0, -4];
-        selectedIndexWidget.draw = () => {};
-        if (selectedIndexWidget.element) {
-            selectedIndexWidget.element.style.display = "none";
-            selectedIndexWidget.element.style.height = "0px";
-            selectedIndexWidget.element.style.margin = "0px";
-            selectedIndexWidget.element.style.padding = "0px";
-        }
-    }
+    hideWidgetFromLayout(selectedIndexWidget);
 
     // 2. Initialize slots state
     node.promptSlots = [
@@ -529,43 +540,19 @@ function setupPromptLibraryNode(node) {
         });
 
         const cols = getColumns();
-        const totalSlots = node.promptSlots?.length || 1;
-        const totalGridRows = Math.ceil(totalSlots / cols);
+        const rows = Array.from(listContainer.querySelectorAll(".zeno-slot-row"));
+        const exactContainerH = calculateContainerHeight({
+            slotTextHeights: node.promptSlots.map((slot) => slot.height),
+            measuredSlotHeights: rows.map((row) => measureUnscaledElementHeight(row)),
+            columns: cols,
+            toolbarHeight: measureUnscaledElementHeight(toolbar),
+            addButtonHeight: measureUnscaledElementHeight(addBtn),
+        });
 
-        let totalGridHeight = 0;
-        const rows = listContainer.querySelectorAll(".zeno-slot-row");
-        for (let r = 0; r < totalGridRows; r++) {
-            let maxRowH = 0;
-            for (let c = 0; c < cols; c++) {
-                const idx = r * cols + c;
-                if (idx < totalSlots) {
-                    let rowH = 0;
-                    if (rows[idx] && rows[idx].offsetHeight > 35) {
-                        rowH = rows[idx].offsetHeight;
-                    } else {
-                        const h = node.promptSlots[idx]?.height || 50;
-                        rowH = h + 56;
-                    }
-                    maxRowH = Math.max(maxRowH, rowH);
-                }
-            }
-            totalGridHeight += maxRowH;
-        }
-        if (totalGridRows > 1) {
-            totalGridHeight += (totalGridRows - 1) * 8; // gap between grid rows
-        }
-
-        // Exact required container height:
-        // toolbar (36) + gap (8) + totalGridHeight + bottomPadding (12) + gap (8) + addBtn (34)
-        const toolbarH = toolbar.offsetHeight > 20 ? toolbar.offsetHeight : 36;
-        const addBtnH = addBtn.offsetHeight > 20 ? addBtn.offsetHeight : 34;
-        const exactContainerH = toolbarH + 8 + totalGridHeight + 12 + 8 + addBtnH;
-
-        // LiteGraph node target height = header (35) + exactContainerH + canvas footer/resize margin (32)
-        const targetH = Math.max(200, 35 + exactContainerH + 32);
+        // Reserve a dedicated bottom band for the output slot and resize handle.
+        const targetH = calculateNodeHeight(exactContainerH);
         const currentW = (node.size && node.size[0]) || 400;
-        const minWidthForCols = Math.max(400, cols * 320);
-        const targetW = Math.max(minWidthForCols, currentW);
+        const targetW = calculateNodeWidth(currentW, cols);
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
@@ -623,34 +610,20 @@ function setupPromptLibraryNode(node) {
     }, { capture: true, passive: false });
 
     const calculateDynamicHeight = () => {
-        if (!node.promptSlots || node.promptSlots.length === 0) return 160;
-        const cols = getColumns();
-        const totalSlots = node.promptSlots.length;
-        const totalGridRows = Math.ceil(totalSlots / cols);
-
-        let totalGridHeight = 0;
-        for (let r = 0; r < totalGridRows; r++) {
-            let maxRowH = 0;
-            for (let c = 0; c < cols; c++) {
-                const idx = r * cols + c;
-                if (idx < totalSlots) {
-                    const s = node.promptSlots[idx];
-                    const h = (typeof s.height === "number" && s.height > 30) ? s.height : 50;
-                    maxRowH = Math.max(maxRowH, h + 56);
-                }
-            }
-            totalGridHeight += maxRowH;
-        }
-        if (totalGridRows > 1) {
-            totalGridHeight += (totalGridRows - 1) * 8;
-        }
-
-        return Math.max(160, 36 + 8 + totalGridHeight + 12 + 8 + 34);
+        const slots = node.promptSlots?.length ? node.promptSlots : [{ height: undefined }];
+        const rows = Array.from(listContainer.querySelectorAll(".zeno-slot-row"));
+        return calculateContainerHeight({
+            slotTextHeights: slots.map((slot) => slot.height),
+            measuredSlotHeights: rows.map((row) => measureUnscaledElementHeight(row)),
+            columns: getColumns(),
+            toolbarHeight: measureUnscaledElementHeight(toolbar),
+            addButtonHeight: measureUnscaledElementHeight(addBtn),
+        });
     };
 
     const updateDynamicLayout = (size) => {
         const currentH = (size && size[1]) || (node.size && node.size[1]) || 280;
-        const availableH = Math.max(120, currentH - 67);
+        const availableH = calculateDomWidgetHeight(currentH);
         if (domWidget && domWidget.element) {
             domWidget.element.style.height = `${availableH}px`;
         }
@@ -659,11 +632,10 @@ function setupPromptLibraryNode(node) {
     const updateNodeBounds = () => {
         const neededContainerH = calculateDynamicHeight();
         const cols = getColumns();
-        const minWidthForCols = Math.max(400, cols * 320);
         const currentW = (node.size && node.size[0]) || 400;
         const currentH = (node.size && node.size[1]) || 280;
-        const targetW = Math.max(minWidthForCols, currentW);
-        const targetH = Math.max(currentH, 35 + neededContainerH + 32);
+        const targetW = calculateNodeWidth(currentW, cols);
+        const targetH = Math.max(currentH, calculateNodeHeight(neededContainerH));
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
@@ -1132,6 +1104,9 @@ function setupPromptLibraryNode(node) {
     let domWidget = null;
     if (node.addDOMWidget) {
         domWidget = node.addDOMWidget("zeno_prompt_library_ui", "custom", container, {
+            // The default ComfyUI DOM-widget margin is 10 px on every side. Keeping
+            // it would silently remove 20 px from the height calculated by Fit Size.
+            margin: 0,
             getValue() {
                 return node.promptSlots;
             },
@@ -1146,8 +1121,9 @@ function setupPromptLibraryNode(node) {
                 return calculateDynamicHeight();
             },
             getHeight() {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 67);
-                return Math.max(120, currentH - 67);
+                const fallbackNodeH = calculateNodeHeight(calculateDynamicHeight());
+                const currentH = (node.size && node.size[1]) || fallbackNodeH;
+                return calculateDomWidgetHeight(currentH);
             },
             onResize(size) {
                 updateDynamicLayout(size);
@@ -1162,8 +1138,14 @@ function setupPromptLibraryNode(node) {
                 node.widgets.unshift(domWidget);
             }
             domWidget.computeSize = (width) => {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 67);
-                return [width || 400, Math.max(120, currentH - 67)];
+                // This is the widget's intrinsic content size, not its current
+                // stretched height. Returning the current node height here makes
+                // that old height a circular minimum and prevents Fit Size from
+                // shrinking a previously tall node.
+                return [
+                    width || PROMPT_LIBRARY_LAYOUT.MIN_NODE_WIDTH,
+                    calculateDynamicHeight(),
+                ];
             };
         }
     }
