@@ -7,38 +7,71 @@ import { app } from "../../scripts/app.js";
  */
 
 /**
- * Syntax highlighter for JSON / Key-Value structured prompts.
- * Automatically colors keys/headings (Cyan), string values (Soft Mint),
- * numbers/booleans (Amber), and brackets/braces (Orange).
+ * Single-pass syntax highlighter for JSON and structured Key-Value prompts.
+ * Tokenizes text in one pass to prevent HTML tag collisions.
  */
-function highlightPromptText(raw) {
-    if (!raw) return "";
-    let text = raw
+function escapeHtml(str) {
+    if (!str) return "";
+    return str
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
+}
 
-    // 1. Double/Single quoted JSON keys: "key": or 'key':
-    text = text.replace(/(["'])(.*?)\1(\s*:)/g, '<span style="color: #38bdf8; font-weight: 600;">$1$2$1</span><span style="color: #94a3b8;">$3</span>');
+function highlightPromptText(raw) {
+    if (!raw) return "";
 
-    // 2. Unquoted prompt tags / headings (e.g. Skin:, Eyes:, Quality:, Style:, Subject:, Tag:)
-    text = text.replace(/(^|[\n,\{\[])\s*([a-zA-Z0-9_\-\s]{1,30})(\s*:)/g, '$1<span style="color: #38bdf8; font-weight: 600;">$2</span><span style="color: #94a3b8;">$3</span>');
+    // Single-pass regex matching tokens without re-processing generated HTML:
+    // 1. Quoted Key + colon: ("key"|'key')\s*(:)
+    // 2. Unquoted Key/Tag + colon: ([A-Za-z0-9_-]+)\s*(:)
+    // 3. Quoted String values: "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*'
+    // 4. Numbers / Booleans / Null: \b(true|false|null|-?\d+(?:\.\d+)?)\b
+    // 5. Brackets & Braces: [{}[\]]
+    // 6. Punctuation: [,;]
+    const tokenRegex = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')\s*(:)|(^|[\n,\{\[])\s*([a-zA-Z0-9_\-]{1,30})(\s*:)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(\b(?:true|false|null|-?\d+(?:\.\d+)?)\b)|([\{\}\[\]\(\)])|([,;])/g;
 
-    // 3. String values (prompt content) after colon: : "content..." or : 'content...'
-    text = text.replace(/:\s*(["'])([\s\S]*?)\1/g, ': <span style="color: #a7f3d0;">$1$2$1</span>');
+    let result = "";
+    let lastIndex = 0;
+    let match;
 
-    // 4. Numbers & Booleans: : 1.5, true, false
-    text = text.replace(/:\s*(\b\d+(?:\.\d+)?\b|\btrue\b|\bfalse\b|\bnull\b)/gi, ': <span style="color: #fbbf24; font-weight: 600;">$1</span>');
+    while ((match = tokenRegex.exec(raw)) !== null) {
+        if (match.index > lastIndex) {
+            result += escapeHtml(raw.slice(lastIndex, match.index));
+        }
 
-    // 5. Brackets & braces: { } [ ]
-    text = text.replace(/([\(\)\[\]\{\}])/g, '<span style="color: #f97316; font-weight: bold;">$1</span>');
+        if (match[1] && match[2]) {
+            // Quoted key ("key":)
+            result += `<span style="color: #38bdf8; font-weight: 600;">${escapeHtml(match[1])}</span><span style="color: #94a3b8;">${escapeHtml(match[2])}</span>`;
+        } else if (match[4] && match[5]) {
+            // Unquoted key (key:)
+            const prefix = match[3] ? escapeHtml(match[3]) : "";
+            result += `${prefix}<span style="color: #38bdf8; font-weight: 600;">${escapeHtml(match[4])}</span><span style="color: #94a3b8;">${escapeHtml(match[5])}</span>`;
+        } else if (match[6]) {
+            // String value ("value")
+            result += `<span style="color: #a7f3d0;">${escapeHtml(match[6])}</span>`;
+        } else if (match[7]) {
+            // Number / Boolean / Null
+            result += `<span style="color: #fbbf24; font-weight: 600;">${escapeHtml(match[7])}</span>`;
+        } else if (match[8]) {
+            // Brackets & Braces ({ } [ ])
+            result += `<span style="color: #f97316; font-weight: bold;">${escapeHtml(match[8])}</span>`;
+        } else if (match[9]) {
+            // Punctuation (, ;)
+            result += `<span style="color: #94a3b8;">${escapeHtml(match[9])}</span>`;
+        }
 
-    // Handle trailing newline so cursor alignment stays perfect in pre-wrap
-    if (raw.endsWith("\n")) {
-        text += "<br/> ";
+        lastIndex = tokenRegex.lastIndex;
     }
 
-    return text;
+    if (lastIndex < raw.length) {
+        result += escapeHtml(raw.slice(lastIndex));
+    }
+
+    if (raw.endsWith("\n")) {
+        result += "<br/> ";
+    }
+
+    return result;
 }
 
 function setupPromptLibraryNode(node) {
