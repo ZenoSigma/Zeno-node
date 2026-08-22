@@ -34,7 +34,7 @@ class PromptLibrary:
             "optional": {
                 "slots_json": ("STRING", {
                     "default": DEFAULT_SLOTS_JSON,
-                    "multiline": True,
+                    "multiline": False,
                 })
             }
         }

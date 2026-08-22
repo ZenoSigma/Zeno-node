@@ -12,13 +12,19 @@ function setupPromptLibraryNode(node) {
     }
     node.__zeno_initialized = true;
 
+    // Ensure LiteGraph positions widgets from top downwards
+    node.widgets_up = true;
+
     // 1. Locate and hide the raw slots_json storage widget
     const slotsJsonWidget = node.widgets?.find((w) => w.name === "slots_json");
     if (slotsJsonWidget) {
         slotsJsonWidget.type = "hidden";
-        slotsJsonWidget.computeSize = () => [0, -4];
+        slotsJsonWidget.computeSize = () => [0, 0];
         if (slotsJsonWidget.element) {
             slotsJsonWidget.element.style.display = "none";
+            slotsJsonWidget.element.style.height = "0px";
+            slotsJsonWidget.element.style.margin = "0px";
+            slotsJsonWidget.element.style.padding = "0px";
         }
     }
 
@@ -75,12 +81,12 @@ function setupPromptLibraryNode(node) {
         gap: 8px;
         width: 100%;
         height: 100%;
-        flex: 1 1 auto;
         box-sizing: border-box;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         font-size: 12px;
         color: #e0e0e0;
-        padding: 4px 2px;
+        padding: 0px 2px;
+        margin: 0;
         pointer-events: auto;
         user-select: text;
     `;
@@ -90,13 +96,13 @@ function setupPromptLibraryNode(node) {
     container.addEventListener("mousedown", (e) => e.stopPropagation());
 
     const listContainer = document.createElement("div");
-    listContainer.className = "zeno-prompt-slots-list comfy-multiline-input";
+    listContainer.className = "zeno-prompt-slots-list";
     listContainer.style.cssText = `
         display: flex;
         flex-direction: column;
         gap: 8px;
-        flex: 1 1 auto;
-        min-height: 120px;
+        flex: 1 1 0;
+        min-height: 0;
         overflow-y: auto;
         padding-right: 4px;
         box-sizing: border-box;
@@ -113,13 +119,15 @@ function setupPromptLibraryNode(node) {
 
     const calculateDynamicHeight = () => {
         const count = node.promptSlots?.length || 1;
-        return Math.max(180, count * 105 + 60);
+        return Math.max(140, count * 105 + 45);
     };
 
     const updateDynamicLayout = (size) => {
         const currentH = (size && size[1]) || (node.size && node.size[1]) || 280;
-        const availableH = Math.max(120, currentH - 140);
-        listContainer.style.maxHeight = `${availableH}px`;
+        const availableH = Math.max(100, currentH - 65);
+        if (domWidget && domWidget.element) {
+            domWidget.element.style.height = `${availableH}px`;
+        }
     };
 
     const updateNodeBounds = () => {
@@ -127,7 +135,7 @@ function setupPromptLibraryNode(node) {
         const currentW = (node.size && node.size[0]) || 400;
         const currentH = (node.size && node.size[1]) || 280;
         const targetW = Math.max(currentW, 400);
-        const targetH = Math.max(currentH, neededHeight + 75);
+        const targetH = Math.max(currentH, neededHeight + 65);
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
@@ -333,8 +341,8 @@ function setupPromptLibraryNode(node) {
                 return calculateDynamicHeight();
             },
             getHeight() {
-                const currentH = (node.size && node.size[1]) || calculateDynamicHeight() + 75;
-                return Math.max(160, currentH - 75);
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 65);
+                return Math.max(120, currentH - 65);
             },
             onResize(size) {
                 updateDynamicLayout(size);
@@ -343,8 +351,8 @@ function setupPromptLibraryNode(node) {
 
         if (domWidget) {
             domWidget.computeSize = (width) => {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 75);
-                return [width || 400, Math.max(160, currentH - 75)];
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 65);
+                return [width || 400, Math.max(120, currentH - 65)];
             };
         }
     }
