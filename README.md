@@ -19,7 +19,7 @@ Automatically organizes and saves image batches with clean, descriptive filename
 - **Smart Naming & Formatting:** Generates `Model_Timestamp_CustomText.png` with standardized casing (capitalizing only index 0) and sanitized paths/digits.
 - **Flexible Subfolders:** Route outputs by Date (`YYYY-MM-DD`), Model Name, or Custom path.
 - **Workflow Retention:** Embeds lossless PNGInfo metadata for full drag-and-drop workflow reconstruction.
-- **Audio Notification:** Optional chime upon batch generation completion.
+- **Customizable Audio Notification:** Audio chime upon batch generation completion with 11 distinct selectable sound presets (Chimes, Ding, Notify, Tada, Chord, etc.) and an interactive in-canvas test button.
 
 ---
 

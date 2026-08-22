@@ -7,24 +7,100 @@ from datetime import datetime
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 
-import folder_paths
-import comfy.cli_args
+try:
+    import folder_paths
+except ImportError:
+    class _MockFolderPaths:
+        @staticmethod
+        def get_output_directory():
+            return "./output"
+        @staticmethod
+        def get_save_image_path(filename_prefix, output_dir, image_width=0, image_height=0):
+            return output_dir, filename_prefix, 0, "", filename_prefix
+    folder_paths = _MockFolderPaths()
+
+try:
+    import comfy.cli_args
+except ImportError:
+    class _MockArgs:
+        disable_metadata = False
+    class _MockCliArgs:
+        args = _MockArgs()
+    class _MockComfy:
+        cli_args = _MockCliArgs()
+    comfy = _MockComfy()
 
 
 DELIMITER = "_"
 
 
-def play_alert_sound():
-    """Plays an alert chime when image generation/saving completes."""
+def play_alert_sound(sound_choice: str = "Chimes"):
+    """Plays a customizable alert chime when image generation/saving completes."""
     try:
         if sys.platform == "win32":
             import winsound
-            winsound.MessageBeep(winsound.MB_ICONASTERISK)
+            import threading
+            sound_choice = str(sound_choice or "Chimes").strip()
+            win_dir = os.environ.get("WINDIR", "C:\\Windows")
+            media_dir = os.path.join(win_dir, "Media")
+
+            wav_map = {
+                "Chimes": "chimes.wav",
+                "Ding": "ding.wav",
+                "Notify": "notify.wav",
+                "Tada": "tada.wav",
+                "Chord": "chord.wav",
+                "Speech On": "Speech On.wav",
+                "Ring": "Ring01.wav",
+                "Windows Default": "Windows Default.wav",
+            }
+
+            if sound_choice in wav_map:
+                wav_path = os.path.join(media_dir, wav_map[sound_choice])
+                if os.path.exists(wav_path):
+                    winsound.PlaySound(wav_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+                    return
+                else:
+                    winsound.MessageBeep(winsound.MB_OK)
+                    return
+            elif sound_choice == "Asterisk":
+                winsound.MessageBeep(winsound.MB_ICONASTERISK)
+                return
+            elif sound_choice == "Exclamation":
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                return
+            elif sound_choice == "Synth Bell":
+                def _beep_seq():
+                    try:
+                        notes = [(523, 80), (659, 80), (784, 80), (1046, 160)]
+                        for freq, dur in notes:
+                            winsound.Beep(freq, dur)
+                    except Exception:
+                        pass
+                threading.Thread(target=_beep_seq, daemon=True).start()
+                return
+            else:
+                winsound.MessageBeep(winsound.MB_OK)
+                return
         else:
             sys.stdout.write("\a")
             sys.stdout.flush()
     except Exception:
         pass
+
+
+# Register ComfyUI API endpoint for interactive frontend sound testing
+try:
+    from server import PromptServer
+    from aiohttp import web
+
+    @PromptServer.instance.routes.get("/zeno/test_sound")
+    async def zeno_test_sound(request):
+        sound_name = request.query.get("sound", "Chimes")
+        play_alert_sound(sound_name)
+        return web.json_response({"status": "ok", "sound": sound_name})
+except Exception:
+    pass
 
 
 def auto_detect_model_name(prompt: dict) -> str:
@@ -197,10 +273,26 @@ class AdvancedSaveImage:
                 }),
                 # 4. Audio chime
                 "play_sound_on_finish": ("BOOLEAN", {
-                    "default": False,
+                    "default": True,
                     "label_on": "Enable",
                     "label_off": "Disable",
                     "tooltip": "Play an audible alert chime when all images in the batch are saved."
+                }),
+                "sound_choice": ([
+                    "Chimes",
+                    "Ding",
+                    "Notify",
+                    "Tada",
+                    "Chord",
+                    "Speech On",
+                    "Ring",
+                    "Windows Default",
+                    "Synth Bell",
+                    "Asterisk",
+                    "Exclamation"
+                ], {
+                    "default": "Chimes",
+                    "tooltip": "Select the alert sound played upon completion."
                 }),
             },
             "hidden": {
@@ -292,9 +384,11 @@ class AdvancedSaveImage:
         subfolder_mode="None",
         custom_subfolder="",
         save_workflow_metadata=True,
-        play_sound_on_finish=False,
+        play_sound_on_finish=True,
+        sound_choice="Chimes",
         prompt=None,
-        extra_pnginfo=None
+        extra_pnginfo=None,
+        **kwargs
     ):
         # 1. Build standardized filename prefix
         filename_prefix = self.build_filename_prefix(
@@ -349,7 +443,7 @@ class AdvancedSaveImage:
             counter += 1
 
         if play_sound_on_finish:
-            play_alert_sound()
+            play_alert_sound(sound_choice)
 
         return {
             "ui": {"images": results},

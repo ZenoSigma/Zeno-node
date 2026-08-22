@@ -22,8 +22,8 @@ This document defines the complete interface specification, parameter types, hid
 | `custom_text` | `STRING` | `""` | Single-line string | Custom text, notes, or tags to append. |
 | `subfolder_mode` | `COMBO` | `"None"` | `["None", "By Date (YYYY-MM-DD)", "By Model Name", "Custom Subfolder"]` | Target subfolder grouping mode. |
 | `custom_subfolder` | `STRING` | `""` | Single-line string | Name/relative path for custom subfolder. |
-| `save_workflow_metadata` | `BOOLEAN` | `True` | `True` / `False` | Embed prompt and workflow JSON into PNG metadata. |
-| `play_sound_on_finish` | `BOOLEAN` | `False` | `True` / `False` | Play completion audio alert. |
+| `play_sound_on_finish` | `BOOLEAN` | `True` | `True` / `False` | Play completion audio alert chime. |
+| `sound_choice` | `COMBO` | `"Chimes"` | `["Chimes", "Ding", "Notify", "Tada", "Chord", "Speech On", "Ring", "Windows Default", "Synth Bell", "Asterisk", "Exclamation"]` | Alert chime sound type (with interactive preview button). |
 
 #### Hidden Inputs:
 | Parameter | Type | Description |
