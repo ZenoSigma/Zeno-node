@@ -8,8 +8,9 @@ Always read context in this sequence:
 2. `docs/architecture.md`, `docs/api_spec.md`, `docs/algorithm.md` (Architecture & math)
 3. `requirements.txt` & `pyproject.toml` (Dependencies)
 4. `__init__.py` (Node mappings & exports)
-5. `nodes/advanced_save_image.py` & `nodes/ratio_latent_node.py` (Core logic)
-6. `tests/test_naming.py` (Unit tests)
+5. `nodes/advanced_save_image.py`, `nodes/ratio_latent_node.py` & `nodes/prompt_library_node.py` (Core logic)
+6. `tests/test_naming.py` & `tests/test_prompt_library.py` (Unit tests)
+
 
 ## 🛑 Absolute Prohibitions
 - DO NOT remove try/catch, validation, or defensive checks.

@@ -1,7 +1,8 @@
 [project]
 name = "comfyui-zeno-node"
-description = "ComfyUI Custom Nodes Pack for smart ratio latent generation & advanced image saving with metadata"
+description = "ComfyUI Custom Nodes Pack for smart ratio latent generation, advanced image saving with metadata, and in-workflow prompt library"
 version = "1.0.0"
+
 license = { file = "LICENSE" }
 dependencies = [
     "torch",

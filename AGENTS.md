@@ -12,8 +12,9 @@ When an AI agent or contributor starts working on this repository, you **MUST** 
 2. **Step 2 - Architecture & Data Flow:** Read `docs/architecture.md`, `docs/api_spec.md`, and `docs/algorithm.md` (Understand tensor shapes and data pipelines before writing code).
 3. **Step 3 - Dependencies & Config:** Read `requirements.txt` and `pyproject.toml`.
 4. **Step 4 - Entrypoint & Node Mappings:** Read `__init__.py` and `nodes/__init__.py`.
-5. **Step 5 - Core Logic & Nodes:** Read `nodes/advanced_save_image.py` and `nodes/ratio_latent_node.py`.
-6. **Step 6 - Verification & Tests:** Read `tests/test_naming.py` and run tests (`python -m unittest discover tests`).
+5. **Step 5 - Core Logic & Nodes:** Read `nodes/advanced_save_image.py`, `nodes/ratio_latent_node.py`, and `nodes/prompt_library_node.py`.
+6. **Step 6 - Verification & Tests:** Read `tests/test_naming.py`, `tests/test_prompt_library.py` and run tests (`python -m unittest discover tests`).
+
 
 ---
 

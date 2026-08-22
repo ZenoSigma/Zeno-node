@@ -116,3 +116,33 @@ The function `auto_detect_model_name` inspects the ComfyUI execution graph (`pro
    \[
    S_{out} = S_{lower}[0].\text{upper}() + S_{lower}[1:]
    \]
+
+---
+
+## 5. 📝 Prompt Library State Serialization & Selection Algorithm
+
+### A. Slot Data Model & JSON Schema
+Prompt slots are maintained in the frontend canvas UI and serialized into a hidden widget string `slots_json`:
+\[
+\mathcal{S} = [s_1, s_2, \dots, s_N], \quad s_i = \{\text{id}: \text{str}, \text{title}: \text{str}, \text{prompt}: \text{str}\}
+\]
+
+### B. Selection & Validation Algorithm
+Given 1-based user input index \( k \in \mathbb{Z} \) and serialized string \( \text{JSON}_{raw} \):
+
+1. **Deserialization & Type Assertion:**
+   \[
+   \mathcal{S} = \text{JSON.parse}(\text{JSON}_{raw}) \quad \text{where } \mathcal{S} \text{ is asserted to be a non-empty list } (N \ge 1).
+   \]
+2. **Index Boundary Enforcement:**
+   \[
+   \text{Assert } 1 \le k \le N \implies \text{reject with actionable error if } k < 1 \lor k > N.
+   \]
+3. **Blank Prompt Fast-Fail:**
+   Extract prompt text \( P = s_k.\text{prompt} \).
+   \[
+   \text{If } \text{trim}(P) = \emptyset \implies \text{raise ValueError to prevent wasteful execution with empty positive prompts.}
+   \]
+4. **Unicode & Formatting Invariance:**
+   Returns \( P \) verbatim as a scalar Python `str`, preserving utf-8 multibyte characters (Vietnamese diacritics, Asian scripts), symbols, and newline delimiters (`\n`).
+

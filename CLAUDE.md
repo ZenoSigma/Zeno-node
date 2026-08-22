@@ -12,8 +12,9 @@ Follow this strict 6-step sequential reading order before writing code:
 2. **Step 2 - Architecture & Specs:** `docs/architecture.md`, `docs/api_spec.md`, and `docs/algorithm.md` (Data pipelines, tensor dimensions).
 3. **Step 3 - Dependencies & Config:** `requirements.txt` and `pyproject.toml`.
 4. **Step 4 - Entrypoint:** `__init__.py` and `nodes/__init__.py`.
-5. **Step 5 - Core Nodes:** `nodes/advanced_save_image.py` and `nodes/ratio_latent_node.py`.
-6. **Step 6 - Verification:** `tests/test_naming.py` and run tests (`python -m unittest discover tests`).
+5. **Step 5 - Core Nodes:** `nodes/advanced_save_image.py`, `nodes/ratio_latent_node.py`, and `nodes/prompt_library_node.py`.
+6. **Step 6 - Verification:** `tests/test_naming.py`, `tests/test_prompt_library.py` and run tests (`python -m unittest discover tests`).
+
 
 ---
 
