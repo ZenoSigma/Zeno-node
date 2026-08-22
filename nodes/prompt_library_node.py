@@ -31,7 +31,7 @@ class PromptLibrary:
                     "tooltip": "One-based slot number (Prompt number) to output."
                 }),
             },
-            "hidden": {
+            "optional": {
                 "slots_json": ("STRING", {
                     "default": DEFAULT_SLOTS_JSON,
                     "multiline": True,

@@ -89,10 +89,10 @@ This document defines the complete interface specification, parameter types, hid
 | :--- | :--- | :--- | :--- | :--- |
 | `selected_index` | `INT` | `1` | `min: 1`, `max: 9999`, `step: 1` | 1-based slot number to output. |
 
-#### Hidden Inputs:
+#### Optional Inputs (UI-Managed):
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `slots_json` | `STRING` | Serialized JSON array of prompt slots (`[{"id": "...", "title": "...", "prompt": "..."}]`) maintained by frontend UI widget. |
+| `slots_json` | `STRING` | Serialized JSON array of prompt slots (`[{"id": "...", "title": "...", "prompt": "..."}]`) maintained by frontend UI widget (hidden from node interface). |
 
 ### B. Output Signatures (`RETURN_TYPES`)
 

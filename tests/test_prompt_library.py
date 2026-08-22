@@ -106,6 +106,15 @@ class TestPromptLibraryNode(unittest.TestCase):
             self.node.get_prompt(selected_index=1, slots_json='{"single": "object"}')
         self.assertIn("Expected a JSON array/list", str(ctx.exception))
 
+    def test_input_types_definition(self):
+        input_types = PromptLibrary.INPUT_TYPES()
+        self.assertIn("required", input_types)
+        self.assertIn("selected_index", input_types["required"])
+        self.assertIn("optional", input_types)
+        self.assertIn("slots_json", input_types["optional"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
