@@ -73,3 +73,30 @@ This document defines the complete interface specification, parameter types, hid
 | `EMPTY_LATENT` | `LATENT` | Dictionary `{"samples": Tensor [B, 4, H // 8, W // 8], "downscale_ratio_spacial": 8}`. |
 | `IMAGE` | `IMAGE` | Transformed image tensor `[B, H, W, C]` (or black canvas if not supplied). |
 | `MASK` | `MASK` | Transformed mask tensor `[B, H, W]` (or zero mask if not supplied). |
+
+---
+
+## 3. 📝 Node: `Zeno - Prompt Library`
+
+- **Class Name:** `PromptLibrary`
+- **Category:** `Zeno/Text`
+- **Output Node:** `False`
+
+### A. Input Parameters (`INPUT_TYPES`)
+
+#### Required Inputs:
+| Parameter | Type | Default | Options / Constraints | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `selected_index` | `INT` | `1` | `min: 1`, `max: 9999`, `step: 1` | 1-based slot number to output. |
+
+#### Hidden Inputs:
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `slots_json` | `STRING` | Serialized JSON array of prompt slots (`[{"id": "...", "title": "...", "prompt": "..."}]`) maintained by frontend UI widget. |
+
+### B. Output Signatures (`RETURN_TYPES`)
+
+| Output Name | Type | Description |
+| :--- | :--- | :--- |
+| `prompt` | `STRING` | The exact prompt text stored in the selected slot. |
+
