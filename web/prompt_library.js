@@ -6,6 +6,41 @@ import { app } from "../../scripts/app.js";
  * Compatible with ComfyUI 2.0 (Vue-based Nodes) and Classic (LiteGraph Canvas).
  */
 
+/**
+ * Syntax highlighter for JSON / Key-Value structured prompts.
+ * Automatically colors keys/headings (Cyan), string values (Soft Mint),
+ * numbers/booleans (Amber), and brackets/braces (Orange).
+ */
+function highlightPromptText(raw) {
+    if (!raw) return "";
+    let text = raw
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+    // 1. Double/Single quoted JSON keys: "key": or 'key':
+    text = text.replace(/(["'])(.*?)\1(\s*:)/g, '<span style="color: #38bdf8; font-weight: 600;">$1$2$1</span><span style="color: #94a3b8;">$3</span>');
+
+    // 2. Unquoted prompt tags / headings (e.g. Skin:, Eyes:, Quality:, Style:, Subject:, Tag:)
+    text = text.replace(/(^|[\n,\{\[])\s*([a-zA-Z0-9_\-\s]{1,30})(\s*:)/g, '$1<span style="color: #38bdf8; font-weight: 600;">$2</span><span style="color: #94a3b8;">$3</span>');
+
+    // 3. String values (prompt content) after colon: : "content..." or : 'content...'
+    text = text.replace(/:\s*(["'])([\s\S]*?)\1/g, ': <span style="color: #a7f3d0;">$1$2$1</span>');
+
+    // 4. Numbers & Booleans: : 1.5, true, false
+    text = text.replace(/:\s*(\b\d+(?:\.\d+)?\b|\btrue\b|\bfalse\b|\bnull\b)/gi, ': <span style="color: #fbbf24; font-weight: 600;">$1</span>');
+
+    // 5. Brackets & braces: { } [ ]
+    text = text.replace(/([\(\)\[\]\{\}])/g, '<span style="color: #f97316; font-weight: bold;">$1</span>');
+
+    // Handle trailing newline so cursor alignment stays perfect in pre-wrap
+    if (raw.endsWith("\n")) {
+        text += "<br/> ";
+    }
+
+    return text;
+}
+
 function setupPromptLibraryNode(node) {
     if (!node || node.__zeno_initialized) {
         return;
@@ -465,14 +500,20 @@ function setupPromptLibraryNode(node) {
         const totalGridRows = Math.ceil(totalSlots / cols);
 
         let totalGridHeight = 0;
+        const rows = listContainer.querySelectorAll(".zeno-slot-row");
         for (let r = 0; r < totalGridRows; r++) {
             let maxRowH = 0;
             for (let c = 0; c < cols; c++) {
                 const idx = r * cols + c;
                 if (idx < totalSlots) {
-                    const h = node.promptSlots[idx]?.height || 50;
-                    const slotFullH = h + 48; // topBar + gap + padding
-                    maxRowH = Math.max(maxRowH, slotFullH);
+                    let rowH = 0;
+                    if (rows[idx] && rows[idx].offsetHeight > 35) {
+                        rowH = rows[idx].offsetHeight;
+                    } else {
+                        const h = node.promptSlots[idx]?.height || 50;
+                        rowH = h + 54;
+                    }
+                    maxRowH = Math.max(maxRowH, rowH);
                 }
             }
             totalGridHeight += maxRowH;
@@ -481,7 +522,8 @@ function setupPromptLibraryNode(node) {
             totalGridHeight += (totalGridRows - 1) * 8; // gap between grid rows
         }
 
-        const totalNeededHeight = 35 + 34 + 6 + totalGridHeight + 6 + 32 + 8;
+        // Exact height: widgets_start_y (35) + toolbar (34) + gap (8) + totalGridHeight + gap (8) + addBtn (32) + buffer (20)
+        const totalNeededHeight = 35 + 34 + 8 + totalGridHeight + 8 + 32 + 20;
         const currentW = (node.size && node.size[0]) || 400;
         const minWidthForCols = Math.max(400, cols * 320);
         const targetW = Math.max(minWidthForCols, currentW);
@@ -514,6 +556,7 @@ function setupPromptLibraryNode(node) {
         grid-template-columns: repeat(${getColumns()}, minmax(0, 1fr));
         gap: 8px;
         align-items: start;
+        align-content: start;
         flex: 1 1 0;
         min-height: 0;
         overflow-y: auto;
@@ -524,6 +567,7 @@ function setupPromptLibraryNode(node) {
     const applyGridLayout = () => {
         const cols = getColumns();
         listContainer.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        listContainer.style.alignContent = "start";
     };
 
     // Isolate wheel / scroll events from canvas zooming
@@ -558,13 +602,16 @@ function setupPromptLibraryNode(node) {
             }
             totalGridHeight += maxRowH;
         }
+        if (totalGridRows > 1) {
+            totalGridHeight += (totalGridRows - 1) * 8;
+        }
 
-        return Math.max(140, 34 + 6 + totalGridHeight + 40);
+        return Math.max(140, 34 + 8 + totalGridHeight + 8 + 32 + 20);
     };
 
     const updateDynamicLayout = (size) => {
         const currentH = (size && size[1]) || (node.size && node.size[1]) || 280;
-        const availableH = Math.max(100, currentH - 38);
+        const availableH = Math.max(100, currentH - 42);
         if (domWidget && domWidget.element) {
             domWidget.element.style.height = `${availableH}px`;
         }
@@ -577,7 +624,7 @@ function setupPromptLibraryNode(node) {
         const currentW = (node.size && node.size[0]) || 400;
         const currentH = (node.size && node.size[1]) || 280;
         const targetW = Math.max(minWidthForCols, currentW);
-        const targetH = Math.max(currentH, neededHeight + 38);
+        const targetH = Math.max(currentH, neededHeight + 42);
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
@@ -760,30 +807,88 @@ function setupPromptLibraryNode(node) {
             topBar.appendChild(expandBtn);
             topBar.appendChild(removeBtn);
 
-            // Multiline prompt textarea
+            // Multiline prompt editor wrapper (dual-layer for JSON & structured prompt syntax highlighting)
+            const editorWrapper = document.createElement("div");
+            editorWrapper.className = "zeno-editor-wrapper";
+            editorWrapper.style.cssText = `
+                position: relative;
+                width: 100%;
+                box-sizing: border-box;
+                background: rgba(12, 12, 14, 0.95);
+                border: 1px solid ${isActive ? "rgba(56, 189, 248, 0.5)" : "#333336"};
+                border-radius: 4px;
+                overflow: hidden;
+            `;
+
+            const backdrop = document.createElement("div");
+            backdrop.className = "zeno-editor-backdrop";
+            backdrop.style.cssText = `
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                height: 100%;
+                box-sizing: border-box;
+                padding: 6px 8px;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+                font-size: 11px;
+                line-height: 1.45;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                word-break: break-word;
+                color: #e2e8f0;
+                pointer-events: none;
+                overflow: hidden;
+                tab-size: 2;
+                z-index: 1;
+            `;
+
             const promptTextarea = document.createElement("textarea");
+            promptTextarea.className = "zeno-prompt-textarea";
             promptTextarea.placeholder = `Enter prompt text for slot #${slotNumber}...`;
             promptTextarea.value = slot.prompt || "";
             promptTextarea.rows = 2;
             promptTextarea.setAttribute("data-capture-wheel", "true");
             promptTextarea.style.cssText = `
+                position: relative;
                 width: 100%;
                 box-sizing: border-box;
-                background: rgba(12, 12, 14, 0.95);
-                border: 1px solid ${isActive ? "rgba(56, 189, 248, 0.35)" : "#333336"};
-                border-radius: 4px;
-                color: #ffffff;
-                padding: 5px 8px;
+                background: transparent;
+                border: none;
+                outline: none;
+                color: transparent;
+                caret-color: #38bdf8;
+                padding: 6px 8px;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
                 font-size: 11px;
-                line-height: 1.4;
+                line-height: 1.45;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                word-break: break-word;
                 resize: vertical;
                 min-height: 48px;
-                font-family: inherit;
-                outline: none;
+                tab-size: 2;
+                z-index: 2;
+                display: block;
             `;
             if (typeof slot.height === "number" && slot.height > 30) {
                 promptTextarea.style.height = `${slot.height}px`;
             }
+
+            const syncHighlight = () => {
+                backdrop.innerHTML = highlightPromptText(promptTextarea.value);
+                backdrop.scrollTop = promptTextarea.scrollTop;
+                backdrop.scrollLeft = promptTextarea.scrollLeft;
+            };
+
+            promptTextarea.addEventListener("input", syncHighlight);
+            promptTextarea.addEventListener("scroll", () => {
+                backdrop.scrollTop = promptTextarea.scrollTop;
+                backdrop.scrollLeft = promptTextarea.scrollLeft;
+            });
+            syncHighlight();
 
             // Expand / Collapse button click logic
             expandBtn.addEventListener("click", (e) => {
@@ -796,7 +901,7 @@ function setupPromptLibraryNode(node) {
                     slot.isExpanded = true;
                     // Auto-calculate scrollHeight to fit all content vertically
                     promptTextarea.style.height = "auto";
-                    const fitHeight = Math.max(50, promptTextarea.scrollHeight + 6);
+                    const fitHeight = Math.max(50, promptTextarea.scrollHeight + 8);
                     promptTextarea.style.height = `${fitHeight}px`;
                     slot.height = fitHeight;
                 } else {
@@ -808,6 +913,7 @@ function setupPromptLibraryNode(node) {
                 }
 
                 updateExpandBtnVisual();
+                syncHighlight();
                 syncToWidget();
                 updateNodeBounds();
             });
@@ -822,6 +928,7 @@ function setupPromptLibraryNode(node) {
                     const canScrollUp = e.deltaY < 0 && promptTextarea.scrollTop > 0.5;
                     if (canScrollDown || canScrollUp) {
                         promptTextarea.scrollTop += e.deltaY;
+                        backdrop.scrollTop = promptTextarea.scrollTop;
                         return;
                     }
                 }
@@ -837,11 +944,12 @@ function setupPromptLibraryNode(node) {
                 slot.prompt = e.target.value;
                 if (slot.isExpanded) {
                     promptTextarea.style.height = "auto";
-                    const fitHeight = Math.max(50, promptTextarea.scrollHeight + 6);
+                    const fitHeight = Math.max(50, promptTextarea.scrollHeight + 8);
                     promptTextarea.style.height = `${fitHeight}px`;
                     slot.height = fitHeight;
                     updateNodeBounds();
                 }
+                syncHighlight();
                 syncToWidget();
             });
 
@@ -853,6 +961,7 @@ function setupPromptLibraryNode(node) {
                     slot.savedHeight = currentH;
                     slot.isExpanded = false;
                     updateExpandBtnVisual();
+                    syncHighlight();
                     syncToWidget();
                     updateNodeBounds();
                 }
@@ -869,14 +978,18 @@ function setupPromptLibraryNode(node) {
                     if (currentH > 35 && currentH !== slot.height) {
                         slot.height = currentH;
                         slot.savedHeight = currentH;
+                        syncHighlight();
                         syncToWidget();
                     }
                 });
                 ro.observe(promptTextarea);
             }
 
+            editorWrapper.appendChild(backdrop);
+            editorWrapper.appendChild(promptTextarea);
+
             row.appendChild(topBar);
-            row.appendChild(promptTextarea);
+            row.appendChild(editorWrapper);
             listContainer.appendChild(row);
         });
 
@@ -924,9 +1037,9 @@ function setupPromptLibraryNode(node) {
                 titleInput.style.borderColor = isActive ? "rgba(56, 189, 248, 0.4)" : "#3a3a3c";
             }
 
-            const textarea = row.querySelector("textarea");
-            if (textarea) {
-                textarea.style.borderColor = isActive ? "rgba(56, 189, 248, 0.35)" : "#333336";
+            const editorWrapper = row.querySelector(".zeno-editor-wrapper");
+            if (editorWrapper) {
+                editorWrapper.style.borderColor = isActive ? "rgba(56, 189, 248, 0.5)" : "#333336";
             }
         });
     };
