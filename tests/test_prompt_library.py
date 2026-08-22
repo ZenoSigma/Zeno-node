@@ -113,6 +113,20 @@ class TestPromptLibraryNode(unittest.TestCase):
         self.assertIn("optional", input_types)
         self.assertIn("slots_json", input_types["optional"])
 
+    def test_slots_with_ui_metadata(self):
+        slots_json = json.dumps([
+            {
+                "id": "slot-custom",
+                "title": "Expanded Slot",
+                "prompt": "expanded prompt text content",
+                "height": 180,
+                "savedHeight": 52,
+                "isExpanded": True
+            }
+        ])
+        result = self.node.get_prompt(selected_index=1, slots_json=slots_json)
+        self.assertEqual(result, ("expanded prompt text content",))
+
 
 if __name__ == "__main__":
     unittest.main()

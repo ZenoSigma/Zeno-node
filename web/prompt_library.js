@@ -63,7 +63,10 @@ function setupPromptLibraryNode(node) {
                     node.promptSlots = parsed.map((s, idx) => ({
                         id: s.id || `slot-${Date.now()}-${idx + 1}`,
                         title: s.title || "",
-                        prompt: s.prompt || ""
+                        prompt: s.prompt || "",
+                        height: (typeof s.height === "number" && s.height > 30) ? s.height : undefined,
+                        savedHeight: (typeof s.savedHeight === "number" && s.savedHeight > 30) ? s.savedHeight : undefined,
+                        isExpanded: Boolean(s.isExpanded)
                     }));
                 }
             } catch (e) {
@@ -94,6 +97,7 @@ function setupPromptLibraryNode(node) {
     // Isolate canvas events on the container
     container.addEventListener("pointerdown", (e) => e.stopPropagation());
     container.addEventListener("mousedown", (e) => e.stopPropagation());
+    container.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
 
     const listContainer = document.createElement("div");
     listContainer.className = "zeno-prompt-slots-list";
@@ -118,8 +122,13 @@ function setupPromptLibraryNode(node) {
     };
 
     const calculateDynamicHeight = () => {
-        const count = node.promptSlots?.length || 1;
-        return Math.max(140, count * 105 + 45);
+        if (!node.promptSlots || node.promptSlots.length === 0) return 140;
+        let total = 45; // add button + padding
+        node.promptSlots.forEach((s) => {
+            const h = (typeof s.height === "number" && s.height > 30) ? s.height : 50;
+            total += h + 45; // topBar (~26px) + gap/padding (~19px) + textarea height
+        });
+        return Math.max(140, total);
     };
 
     const updateDynamicLayout = (size) => {
@@ -168,8 +177,9 @@ function setupPromptLibraryNode(node) {
                 box-sizing: border-box;
                 transition: border-color 0.2s, background-color 0.2s;
             `;
+            row.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
 
-            // Top bar: Index badge, Title input, Remove button
+            // Top bar: Index badge, Title input, Expand/Collapse button, Remove button
             const topBar = document.createElement("div");
             topBar.style.cssText = `
                 display: flex;
@@ -204,9 +214,50 @@ function setupPromptLibraryNode(node) {
                 box-sizing: border-box;
             `;
             titleInput.addEventListener("keydown", (e) => e.stopPropagation());
+            titleInput.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
             titleInput.addEventListener("input", (e) => {
                 slot.title = e.target.value;
                 syncToWidget();
+            });
+
+            // Expand / Collapse button
+            const expandBtn = document.createElement("button");
+            const updateExpandBtnVisual = () => {
+                if (slot.isExpanded) {
+                    expandBtn.innerText = "⤡";
+                    expandBtn.title = "Thu gọn ô prompt (Collapse slot)";
+                    expandBtn.style.background = "rgba(56, 189, 248, 0.25)";
+                    expandBtn.style.borderColor = "rgba(56, 189, 248, 0.5)";
+                    expandBtn.style.color = "#38bdf8";
+                } else {
+                    expandBtn.innerText = "⤢";
+                    expandBtn.title = "Mở rộng theo chiều dọc để xem hết nội dung (Expand slot vertically)";
+                    expandBtn.style.background = "rgba(255, 255, 255, 0.08)";
+                    expandBtn.style.borderColor = "rgba(255, 255, 255, 0.2)";
+                    expandBtn.style.color = "#94a3b8";
+                }
+            };
+
+            expandBtn.style.cssText = `
+                border-radius: 4px;
+                cursor: pointer;
+                padding: 2px 7px;
+                font-size: 11px;
+                font-weight: bold;
+                transition: all 0.15s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+            `;
+            updateExpandBtnVisual();
+
+            expandBtn.addEventListener("mouseenter", () => {
+                expandBtn.style.background = slot.isExpanded ? "rgba(56, 189, 248, 0.45)" : "rgba(255, 255, 255, 0.2)";
+                expandBtn.style.color = "#ffffff";
+            });
+            expandBtn.addEventListener("mouseleave", () => {
+                updateExpandBtnVisual();
             });
 
             const removeBtn = document.createElement("button");
@@ -243,6 +294,7 @@ function setupPromptLibraryNode(node) {
 
             topBar.appendChild(badge);
             topBar.appendChild(titleInput);
+            topBar.appendChild(expandBtn);
             topBar.appendChild(removeBtn);
 
             // Multiline prompt textarea
@@ -262,14 +314,88 @@ function setupPromptLibraryNode(node) {
                 line-height: 1.4;
                 resize: vertical;
                 min-height: 48px;
+                ${slot.height ? `height: ${slot.height}px;` : ""}
                 font-family: inherit;
                 outline: none;
             `;
+
+            // Expand / Collapse button click logic
+            expandBtn.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (!slot.isExpanded) {
+                    // Save current height before expanding
+                    slot.savedHeight = slot.height || promptTextarea.offsetHeight || 50;
+                    slot.isExpanded = true;
+                    // Auto-calculate scrollHeight to fit all content vertically
+                    promptTextarea.style.height = "auto";
+                    const fitHeight = Math.max(50, promptTextarea.scrollHeight + 6);
+                    promptTextarea.style.height = `${fitHeight}px`;
+                    slot.height = fitHeight;
+                } else {
+                    // Collapse back to saved height or compact default
+                    slot.isExpanded = false;
+                    const collapseH = slot.savedHeight || 50;
+                    slot.height = collapseH;
+                    promptTextarea.style.height = `${collapseH}px`;
+                }
+
+                updateExpandBtnVisual();
+                syncToWidget();
+                updateNodeBounds();
+            });
+
+            // Prevent wheel events inside textarea from zooming canvas
+            promptTextarea.addEventListener("wheel", (e) => {
+                e.stopPropagation();
+            }, { passive: false });
+
+            // Isolate pointerdown/mousedown inside textarea
+            promptTextarea.addEventListener("mousedown", (e) => e.stopPropagation());
+            promptTextarea.addEventListener("pointerdown", (e) => e.stopPropagation());
             promptTextarea.addEventListener("keydown", (e) => e.stopPropagation());
+
             promptTextarea.addEventListener("input", (e) => {
                 slot.prompt = e.target.value;
+                if (slot.isExpanded) {
+                    promptTextarea.style.height = "auto";
+                    const fitHeight = Math.max(50, promptTextarea.scrollHeight + 6);
+                    promptTextarea.style.height = `${fitHeight}px`;
+                    slot.height = fitHeight;
+                    updateNodeBounds();
+                }
                 syncToWidget();
             });
+
+            // Capture manual resize of textarea by user dragging handle
+            promptTextarea.addEventListener("mouseup", () => {
+                const currentH = promptTextarea.offsetHeight;
+                if (currentH > 35 && currentH !== slot.height) {
+                    slot.height = currentH;
+                    slot.savedHeight = currentH;
+                    slot.isExpanded = false;
+                    updateExpandBtnVisual();
+                    syncToWidget();
+                    updateNodeBounds();
+                }
+            });
+
+            if (window.ResizeObserver) {
+                let initialized = false;
+                const ro = new ResizeObserver(() => {
+                    if (!initialized) {
+                        initialized = true;
+                        return;
+                    }
+                    const currentH = promptTextarea.offsetHeight;
+                    if (currentH > 35 && currentH !== slot.height) {
+                        slot.height = currentH;
+                        syncToWidget();
+                    }
+                });
+                ro.observe(promptTextarea);
+            }
 
             row.appendChild(topBar);
             row.appendChild(promptTextarea);
