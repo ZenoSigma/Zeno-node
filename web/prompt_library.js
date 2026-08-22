@@ -12,14 +12,16 @@ function setupPromptLibraryNode(node) {
     }
     node.__zeno_initialized = true;
 
-    // Ensure LiteGraph positions widgets from top downwards
+    // Ensure LiteGraph positions widgets from top downwards starting right under header
     node.widgets_up = true;
+    node.widgets_start_y = 35;
 
     // 1. Locate and hide raw storage widgets (slots_json and selected_index)
     const slotsJsonWidget = node.widgets?.find((w) => w.name === "slots_json");
     if (slotsJsonWidget) {
         slotsJsonWidget.type = "hidden";
-        slotsJsonWidget.computeSize = () => [0, 0];
+        slotsJsonWidget.computeSize = () => [0, -4];
+        slotsJsonWidget.draw = () => {};
         if (slotsJsonWidget.element) {
             slotsJsonWidget.element.style.display = "none";
             slotsJsonWidget.element.style.height = "0px";
@@ -31,7 +33,8 @@ function setupPromptLibraryNode(node) {
     const selectedIndexWidget = node.widgets?.find((w) => w.name === "selected_index");
     if (selectedIndexWidget) {
         selectedIndexWidget.type = "hidden";
-        selectedIndexWidget.computeSize = () => [0, 0];
+        selectedIndexWidget.computeSize = () => [0, -4];
+        selectedIndexWidget.draw = () => {};
         if (selectedIndexWidget.element) {
             selectedIndexWidget.element.style.display = "none";
             selectedIndexWidget.element.style.height = "0px";
@@ -330,7 +333,7 @@ function setupPromptLibraryNode(node) {
             totalSlotsHeight = 60;
         }
 
-        const totalNeededHeight = 35 + 34 + 8 + totalSlotsHeight + 8 + 32 + 12;
+        const totalNeededHeight = 35 + 34 + 6 + totalSlotsHeight + 6 + 32 + 8;
         const currentW = (node.size && node.size[0]) || 400;
         const targetW = Math.max(400, currentW);
         const targetH = Math.max(180, totalNeededHeight);
@@ -382,17 +385,17 @@ function setupPromptLibraryNode(node) {
 
     const calculateDynamicHeight = () => {
         if (!node.promptSlots || node.promptSlots.length === 0) return 140;
-        let total = 36 + 8 + 45; // toolbar (~36px) + gap (8px) + add button (32px) + padding
+        let total = 34 + 6 + 40; // toolbar (~34px) + gap (6px) + add button (32px) + padding
         node.promptSlots.forEach((s) => {
             const h = (typeof s.height === "number" && s.height > 30) ? s.height : 50;
-            total += h + 56; // topBar + gap + textarea + padding + row gap
+            total += h + 54; // topBar + gap + textarea + padding + row gap
         });
         return Math.max(140, total);
     };
 
     const updateDynamicLayout = (size) => {
         const currentH = (size && size[1]) || (node.size && node.size[1]) || 280;
-        const availableH = Math.max(100, currentH - 40);
+        const availableH = Math.max(100, currentH - 38);
         if (domWidget && domWidget.element) {
             domWidget.element.style.height = `${availableH}px`;
         }
@@ -403,7 +406,7 @@ function setupPromptLibraryNode(node) {
         const currentW = (node.size && node.size[0]) || 400;
         const currentH = (node.size && node.size[1]) || 280;
         const targetW = Math.max(currentW, 400);
-        const targetH = Math.max(currentH, neededHeight + 40);
+        const targetH = Math.max(currentH, neededHeight + 38);
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
@@ -813,8 +816,8 @@ function setupPromptLibraryNode(node) {
                 return calculateDynamicHeight();
             },
             getHeight() {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 40);
-                return Math.max(120, currentH - 40);
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 38);
+                return Math.max(120, currentH - 38);
             },
             onResize(size) {
                 updateDynamicLayout(size);
@@ -822,9 +825,15 @@ function setupPromptLibraryNode(node) {
         });
 
         if (domWidget) {
+            // Shift domWidget to front of widgets array so no hidden widgets push it down
+            const wIdx = node.widgets.indexOf(domWidget);
+            if (wIdx > 0) {
+                node.widgets.splice(wIdx, 1);
+                node.widgets.unshift(domWidget);
+            }
             domWidget.computeSize = (width) => {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 40);
-                return [width || 400, Math.max(120, currentH - 40)];
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 38);
+                return [width || 400, Math.max(120, currentH - 38)];
             };
         }
     }
