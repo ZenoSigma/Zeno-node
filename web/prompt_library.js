@@ -156,6 +156,14 @@ function setupPromptLibraryNode(node) {
     };
 
     const renderSlots = () => {
+        // Save current DOM heights of any active textareas before clearing
+        const existingTextareas = listContainer.querySelectorAll("textarea");
+        existingTextareas.forEach((ta, idx) => {
+            if (node.promptSlots[idx] && ta.offsetHeight > 35) {
+                node.promptSlots[idx].height = ta.offsetHeight;
+            }
+        });
+
         listContainer.innerHTML = "";
         const activeIndex = getSelectedIndex();
 
@@ -188,6 +196,7 @@ function setupPromptLibraryNode(node) {
             `;
 
             const badge = document.createElement("span");
+            badge.className = "zeno-slot-badge";
             badge.innerText = `[${slotNumber}]${isActive ? " ★" : ""}`;
             badge.title = isActive ? "Currently selected output slot" : `Slot ${slotNumber}`;
             badge.style.cssText = `
@@ -314,10 +323,12 @@ function setupPromptLibraryNode(node) {
                 line-height: 1.4;
                 resize: vertical;
                 min-height: 48px;
-                ${slot.height ? `height: ${slot.height}px;` : ""}
                 font-family: inherit;
                 outline: none;
             `;
+            if (typeof slot.height === "number" && slot.height > 30) {
+                promptTextarea.style.height = `${slot.height}px`;
+            }
 
             // Expand / Collapse button click logic
             expandBtn.addEventListener("click", (e) => {
@@ -391,6 +402,7 @@ function setupPromptLibraryNode(node) {
                     const currentH = promptTextarea.offsetHeight;
                     if (currentH > 35 && currentH !== slot.height) {
                         slot.height = currentH;
+                        slot.savedHeight = currentH;
                         syncToWidget();
                     }
                 });
@@ -403,6 +415,45 @@ function setupPromptLibraryNode(node) {
         });
 
         updateDynamicLayout();
+    };
+
+    const updateActiveSlotHighlight = () => {
+        const activeIndex = getSelectedIndex();
+        const rows = listContainer.querySelectorAll(".zeno-slot-row");
+        if (rows.length !== (node.promptSlots?.length || 0)) {
+            renderSlots();
+            return;
+        }
+        rows.forEach((row, idx) => {
+            const slotNumber = idx + 1;
+            const isActive = slotNumber === activeIndex;
+
+            if (isActive) {
+                row.classList.add("zeno-slot-active");
+            } else {
+                row.classList.remove("zeno-slot-active");
+            }
+            row.style.background = isActive ? "rgba(35, 55, 80, 0.85)" : "rgba(28, 28, 30, 0.8)";
+            row.style.borderColor = isActive ? "#38bdf8" : "rgba(255, 255, 255, 0.12)";
+            row.style.boxShadow = isActive ? "0 0 8px rgba(56, 189, 248, 0.25)" : "none";
+
+            const badge = row.querySelector(".zeno-slot-badge");
+            if (badge) {
+                badge.innerText = `[${slotNumber}]${isActive ? " ★" : ""}`;
+                badge.title = isActive ? "Currently selected output slot" : `Slot ${slotNumber}`;
+                badge.style.color = isActive ? "#38bdf8" : "#94a3b8";
+            }
+
+            const titleInput = row.querySelector("input");
+            if (titleInput) {
+                titleInput.style.borderColor = isActive ? "rgba(56, 189, 248, 0.4)" : "#3a3a3c";
+            }
+
+            const textarea = row.querySelector("textarea");
+            if (textarea) {
+                textarea.style.borderColor = isActive ? "rgba(56, 189, 248, 0.35)" : "#333336";
+            }
+        });
     };
 
     // Add Slot button
@@ -497,7 +548,7 @@ function setupPromptLibraryNode(node) {
         const origCallback = selectedIndexWidget.callback;
         selectedIndexWidget.callback = function (val) {
             const res = origCallback ? origCallback.apply(this, arguments) : undefined;
-            renderSlots();
+            updateActiveSlotHighlight();
             return res;
         };
     }
