@@ -94,13 +94,20 @@ function setupPromptLibraryNode(node) {
         user-select: text;
     `;
 
-    // Isolate canvas events on the container
-    container.addEventListener("pointerdown", (e) => e.stopPropagation());
-    container.addEventListener("mousedown", (e) => e.stopPropagation());
-    container.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
+    container.setAttribute("data-capture-wheel", "true");
+
+    // Isolate canvas events on the container (capture phase to block ComfyUI/LiteGraph canvas zoom)
+    container.addEventListener("pointerdown", (e) => e.stopPropagation(), { capture: true });
+    container.addEventListener("mousedown", (e) => e.stopPropagation(), { capture: true });
+    container.addEventListener("wheel", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        listContainer.scrollTop += e.deltaY;
+    }, { capture: true, passive: false });
 
     const listContainer = document.createElement("div");
     listContainer.className = "zeno-prompt-slots-list";
+    listContainer.setAttribute("data-capture-wheel", "true");
     listContainer.style.cssText = `
         display: flex;
         flex-direction: column;
@@ -113,7 +120,11 @@ function setupPromptLibraryNode(node) {
     `;
 
     // Isolate wheel / scroll events from canvas zooming
-    listContainer.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
+    listContainer.addEventListener("wheel", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        listContainer.scrollTop += e.deltaY;
+    }, { capture: true, passive: false });
 
     const getSelectedIndex = () => {
         const selWidget = node.widgets?.find((w) => w.name === "selected_index");
@@ -185,7 +196,12 @@ function setupPromptLibraryNode(node) {
                 box-sizing: border-box;
                 transition: border-color 0.2s, background-color 0.2s;
             `;
-            row.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
+            row.setAttribute("data-capture-wheel", "true");
+            row.addEventListener("wheel", (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                listContainer.scrollTop += e.deltaY;
+            }, { capture: true, passive: false });
 
             // Top bar: Index badge, Title input, Expand/Collapse button, Remove button
             const topBar = document.createElement("div");
@@ -211,6 +227,7 @@ function setupPromptLibraryNode(node) {
             titleInput.type = "text";
             titleInput.placeholder = "Slot title / tag (e.g., Cyberpunk, Portrait)...";
             titleInput.value = slot.title || "";
+            titleInput.setAttribute("data-capture-wheel", "true");
             titleInput.style.cssText = `
                 flex: 1;
                 background: rgba(15, 15, 18, 0.9);
@@ -223,7 +240,11 @@ function setupPromptLibraryNode(node) {
                 box-sizing: border-box;
             `;
             titleInput.addEventListener("keydown", (e) => e.stopPropagation());
-            titleInput.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
+            titleInput.addEventListener("wheel", (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                listContainer.scrollTop += e.deltaY;
+            }, { capture: true, passive: false });
             titleInput.addEventListener("input", (e) => {
                 slot.title = e.target.value;
                 syncToWidget();
@@ -311,6 +332,7 @@ function setupPromptLibraryNode(node) {
             promptTextarea.placeholder = `Enter prompt text for slot #${slotNumber}...`;
             promptTextarea.value = slot.prompt || "";
             promptTextarea.rows = 2;
+            promptTextarea.setAttribute("data-capture-wheel", "true");
             promptTextarea.style.cssText = `
                 width: 100%;
                 box-sizing: border-box;
@@ -357,10 +379,21 @@ function setupPromptLibraryNode(node) {
                 updateNodeBounds();
             });
 
-            // Prevent wheel events inside textarea from zooming canvas
+            // Prevent wheel events inside textarea from zooming canvas (capture phase)
             promptTextarea.addEventListener("wheel", (e) => {
                 e.stopPropagation();
-            }, { passive: false });
+                e.preventDefault();
+                const maxScroll = promptTextarea.scrollHeight - promptTextarea.clientHeight;
+                if (maxScroll > 1) {
+                    const canScrollDown = e.deltaY > 0 && promptTextarea.scrollTop < maxScroll - 0.5;
+                    const canScrollUp = e.deltaY < 0 && promptTextarea.scrollTop > 0.5;
+                    if (canScrollDown || canScrollUp) {
+                        promptTextarea.scrollTop += e.deltaY;
+                        return;
+                    }
+                }
+                listContainer.scrollTop += e.deltaY;
+            }, { capture: true, passive: false });
 
             // Isolate pointerdown/mousedown inside textarea
             promptTextarea.addEventListener("mousedown", (e) => e.stopPropagation());
