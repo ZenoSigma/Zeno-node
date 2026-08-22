@@ -59,6 +59,14 @@ function setupPromptLibraryNode(node) {
         node.properties.slots_json = jsonStr;
     };
 
+    const getColumns = () => {
+        let cols = node.properties?.columns;
+        if (typeof cols !== "number" || cols < 1) {
+            cols = 1;
+        }
+        return Math.max(1, Math.min(6, cols));
+    };
+
     const getSelectedIndex = () => {
         let val = selectedIndexWidget?.value;
         if (val === undefined && node.properties?.selected_index !== undefined) {
@@ -123,7 +131,7 @@ function setupPromptLibraryNode(node) {
     container.addEventListener("pointerdown", (e) => e.stopPropagation(), { capture: true });
     container.addEventListener("mousedown", (e) => e.stopPropagation(), { capture: true });
 
-    // Top Toolbar: Compact Selected Index Selector & Fit Button
+    // Top Toolbar: Selected Index Selector, Columns Selector & Fit Button
     const toolbar = document.createElement("div");
     toolbar.className = "zeno-prompt-toolbar";
     toolbar.style.cssText = `
@@ -139,6 +147,7 @@ function setupPromptLibraryNode(node) {
         flex-shrink: 0;
     `;
 
+    // 1) Selected Index group
     const indexGroup = document.createElement("div");
     indexGroup.style.cssText = `
         display: flex;
@@ -281,7 +290,138 @@ function setupPromptLibraryNode(node) {
     indexGroup.appendChild(incBtn);
     indexGroup.appendChild(countBadge);
 
-    // Fit Button (Fits node size to current slots without resetting any slot sizes)
+    // 2) Columns selector group
+    const colsGroup = document.createElement("div");
+    colsGroup.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    `;
+
+    const colsLabel = document.createElement("span");
+    colsLabel.innerText = "Cols:";
+    colsLabel.title = "Number of columns (Số cột hiển thị)";
+    colsLabel.style.cssText = `
+        font-weight: 600;
+        font-size: 11px;
+        color: #94a3b8;
+        letter-spacing: 0.3px;
+    `;
+
+    const decColsBtn = document.createElement("button");
+    decColsBtn.innerText = "−";
+    decColsBtn.title = "Decrease columns (Giảm số cột)";
+    decColsBtn.style.cssText = `
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #f1f5f9;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: bold;
+        line-height: 1;
+        padding: 0;
+        transition: all 0.15s ease;
+    `;
+    decColsBtn.addEventListener("mouseenter", () => {
+        decColsBtn.style.background = "#2563eb";
+        decColsBtn.style.borderColor = "#3b82f6";
+    });
+    decColsBtn.addEventListener("mouseleave", () => {
+        decColsBtn.style.background = "#1e293b";
+        decColsBtn.style.borderColor = "#334155";
+    });
+
+    const colsInput = document.createElement("input");
+    colsInput.type = "number";
+    colsInput.min = "1";
+    colsInput.max = "6";
+    colsInput.value = getColumns();
+    colsInput.setAttribute("data-capture-wheel", "true");
+    colsInput.title = "Số cột hiển thị (Columns)";
+    colsInput.style.cssText = `
+        width: 36px;
+        height: 22px;
+        background: #0f172a;
+        border: 1px solid rgba(56, 189, 248, 0.5);
+        border-radius: 4px;
+        color: #38bdf8;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+        outline: none;
+        box-sizing: border-box;
+        padding: 0 2px;
+        -moz-appearance: textfield;
+    `;
+    colsInput.addEventListener("keydown", (e) => e.stopPropagation());
+    colsInput.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
+
+    const incColsBtn = document.createElement("button");
+    incColsBtn.innerText = "+";
+    incColsBtn.title = "Increase columns (Tăng số cột)";
+    incColsBtn.style.cssText = `
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #f1f5f9;
+        border-radius: 4px;
+        cursor: pointer;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: bold;
+        line-height: 1;
+        padding: 0;
+        transition: all 0.15s ease;
+    `;
+    incColsBtn.addEventListener("mouseenter", () => {
+        incColsBtn.style.background = "#2563eb";
+        incColsBtn.style.borderColor = "#3b82f6";
+    });
+    incColsBtn.addEventListener("mouseleave", () => {
+        incColsBtn.style.background = "#1e293b";
+        incColsBtn.style.borderColor = "#334155";
+    });
+
+    const setColumnsValue = (val) => {
+        const clamped = Math.max(1, Math.min(6, parseInt(val, 10) || 1));
+        colsInput.value = clamped;
+        if (!node.properties) node.properties = {};
+        node.properties.columns = clamped;
+        applyGridLayout();
+        updateNodeBounds();
+    };
+
+    decColsBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setColumnsValue(getColumns() - 1);
+    });
+
+    incColsBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setColumnsValue(getColumns() + 1);
+    });
+
+    colsInput.addEventListener("change", (e) => {
+        setColumnsValue(e.target.value);
+    });
+
+    colsGroup.appendChild(colsLabel);
+    colsGroup.appendChild(decColsBtn);
+    colsGroup.appendChild(colsInput);
+    colsGroup.appendChild(incColsBtn);
+
+    // 3) Fit Button (Fits node size to current slots without resetting any slot sizes)
     const fitBtn = document.createElement("button");
     fitBtn.innerText = "⛶ Fit Size";
     fitBtn.title = "Tự động căn chỉnh kích thước node vừa khít các ô prompt hiện tại (không reset kích thước các ô)";
@@ -320,22 +460,31 @@ function setupPromptLibraryNode(node) {
             }
         });
 
-        let totalSlotsHeight = 0;
-        const rows = listContainer.querySelectorAll(".zeno-slot-row");
-        if (rows.length > 0) {
-            rows.forEach((row, idx) => {
-                const ta = row.querySelector("textarea");
-                const taHeight = (ta && ta.offsetHeight > 35) ? ta.offsetHeight : ((node.promptSlots[idx]?.height) || 50);
-                totalSlotsHeight += (taHeight + 48);
-            });
-            totalSlotsHeight += (rows.length - 1) * 8;
-        } else {
-            totalSlotsHeight = 60;
+        const cols = getColumns();
+        const totalSlots = node.promptSlots?.length || 1;
+        const totalGridRows = Math.ceil(totalSlots / cols);
+
+        let totalGridHeight = 0;
+        for (let r = 0; r < totalGridRows; r++) {
+            let maxRowH = 0;
+            for (let c = 0; c < cols; c++) {
+                const idx = r * cols + c;
+                if (idx < totalSlots) {
+                    const h = node.promptSlots[idx]?.height || 50;
+                    const slotFullH = h + 48; // topBar + gap + padding
+                    maxRowH = Math.max(maxRowH, slotFullH);
+                }
+            }
+            totalGridHeight += maxRowH;
+        }
+        if (totalGridRows > 1) {
+            totalGridHeight += (totalGridRows - 1) * 8; // gap between grid rows
         }
 
-        const totalNeededHeight = 35 + 34 + 6 + totalSlotsHeight + 6 + 32 + 8;
+        const totalNeededHeight = 35 + 34 + 6 + totalGridHeight + 6 + 32 + 8;
         const currentW = (node.size && node.size[0]) || 400;
-        const targetW = Math.max(400, currentW);
+        const minWidthForCols = Math.max(400, cols * 320);
+        const targetW = Math.max(minWidthForCols, currentW);
         const targetH = Math.max(180, totalNeededHeight);
 
         if (node.setSize) {
@@ -354,21 +503,28 @@ function setupPromptLibraryNode(node) {
     });
 
     toolbar.appendChild(indexGroup);
+    toolbar.appendChild(colsGroup);
     toolbar.appendChild(fitBtn);
 
     const listContainer = document.createElement("div");
     listContainer.className = "zeno-prompt-slots-list";
     listContainer.setAttribute("data-capture-wheel", "true");
     listContainer.style.cssText = `
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-columns: repeat(${getColumns()}, minmax(0, 1fr));
         gap: 8px;
+        align-items: start;
         flex: 1 1 0;
         min-height: 0;
         overflow-y: auto;
         padding-right: 4px;
         box-sizing: border-box;
     `;
+
+    const applyGridLayout = () => {
+        const cols = getColumns();
+        listContainer.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+    };
 
     // Isolate wheel / scroll events from canvas zooming
     container.addEventListener("wheel", (e) => {
@@ -385,12 +541,25 @@ function setupPromptLibraryNode(node) {
 
     const calculateDynamicHeight = () => {
         if (!node.promptSlots || node.promptSlots.length === 0) return 140;
-        let total = 34 + 6 + 40; // toolbar (~34px) + gap (6px) + add button (32px) + padding
-        node.promptSlots.forEach((s) => {
-            const h = (typeof s.height === "number" && s.height > 30) ? s.height : 50;
-            total += h + 54; // topBar + gap + textarea + padding + row gap
-        });
-        return Math.max(140, total);
+        const cols = getColumns();
+        const totalSlots = node.promptSlots.length;
+        const totalGridRows = Math.ceil(totalSlots / cols);
+
+        let totalGridHeight = 0;
+        for (let r = 0; r < totalGridRows; r++) {
+            let maxRowH = 0;
+            for (let c = 0; c < cols; c++) {
+                const idx = r * cols + c;
+                if (idx < totalSlots) {
+                    const s = node.promptSlots[idx];
+                    const h = (typeof s.height === "number" && s.height > 30) ? s.height : 50;
+                    maxRowH = Math.max(maxRowH, h + 54);
+                }
+            }
+            totalGridHeight += maxRowH;
+        }
+
+        return Math.max(140, 34 + 6 + totalGridHeight + 40);
     };
 
     const updateDynamicLayout = (size) => {
@@ -403,9 +572,11 @@ function setupPromptLibraryNode(node) {
 
     const updateNodeBounds = () => {
         const neededHeight = calculateDynamicHeight();
+        const cols = getColumns();
+        const minWidthForCols = Math.max(400, cols * 320);
         const currentW = (node.size && node.size[0]) || 400;
         const currentH = (node.size && node.size[1]) || 280;
-        const targetW = Math.max(currentW, 400);
+        const targetW = Math.max(minWidthForCols, currentW);
         const targetH = Math.max(currentH, neededHeight + 38);
 
         if (node.setSize) {
@@ -429,6 +600,10 @@ function setupPromptLibraryNode(node) {
         listContainer.innerHTML = "";
         const activeIndex = getSelectedIndex();
 
+        applyGridLayout();
+        if (colsInput) {
+            colsInput.value = getColumns();
+        }
         if (countBadge) {
             countBadge.innerText = `/ ${node.promptSlots?.length || 1}`;
         }
@@ -712,6 +887,9 @@ function setupPromptLibraryNode(node) {
         const activeIndex = getSelectedIndex();
         if (indexInput && indexInput.value != activeIndex) {
             indexInput.value = activeIndex;
+        }
+        if (colsInput && colsInput.value != getColumns()) {
+            colsInput.value = getColumns();
         }
         if (countBadge) {
             countBadge.innerText = `/ ${node.promptSlots?.length || 1}`;
