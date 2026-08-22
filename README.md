@@ -148,8 +148,7 @@ Zeno-node/
 ├── docs/
 │   ├── architecture.md          # Architecture & data pipeline specs
 │   ├── api_spec.md              # Full API parameter & output contract
-│   ├── algorithm.md             # Snapping math & spatial interpolation formulas
-│   └── prompt_library_plan.md   # Prompt library MVP specification
+│   └── algorithm.md             # Snapping math & spatial interpolation formulas
 ├── nodes/
 │   ├── __init__.py
 │   ├── advanced_save_image.py   # AdvancedSaveImage implementation
@@ -179,8 +178,8 @@ python -m unittest discover tests
 - [Architecture & Data Pipeline](docs/architecture.md) — Architectural diagrams, module separation, execution flows.
 - [API & Node Specification](docs/api_spec.md) — Parameter constraints, hidden inputs, and return signatures.
 - [Algorithm & Math Principles](docs/algorithm.md) — Snap-to-32 calculations and spatial interpolation transforms.
-- [Prompt Library MVP Plan](docs/prompt_library_plan.md) — Functional specifications for the prompt library node.
 - [AI Operator Guidelines](AGENTS.md) — Sequential AI onboarding protocol and contribution standards.
+
 
 ---
 

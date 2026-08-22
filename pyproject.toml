@@ -1,20 +1,44 @@
 [project]
 name = "comfyui-zeno-node"
-description = "ComfyUI Custom Nodes Pack for smart ratio latent generation, advanced image saving with metadata, and in-workflow prompt library"
+description = "High-performance ComfyUI Custom Nodes Pack for smart ratio latent generation, advanced image saving with metadata, and in-workflow prompt library"
 version = "1.0.0"
-
+readme = "README.md"
 license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "ZenoSigma", email = "zeno@users.noreply.github.com" }
+]
+keywords = [
+    "comfyui",
+    "comfyui-custom-nodes",
+    "prompt-library",
+    "latent-generator",
+    "aspect-ratio",
+    "save-image",
+    "png-metadata",
+    "image-generation"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Multimedia :: Graphics",
+]
 dependencies = [
     "torch",
     "torchvision",
     "numpy",
     "Pillow"
 ]
-readme = "README.md"
-requires-python = ">=3.10"
 
 [project.urls]
+Homepage = "https://github.com/ZenoSigma/Zeno-node"
 Repository = "https://github.com/ZenoSigma/Zeno-node"
+Issues = "https://github.com/ZenoSigma/Zeno-node/issues"
 
 [tool.comfy]
 PublisherId = "zenosigma"

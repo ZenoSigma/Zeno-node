@@ -17,8 +17,8 @@ Zeno-node/
 ├── docs/                           # Deep technical specifications
 │   ├── architecture.md             # End-to-end data pipeline diagrams
 │   ├── api_spec.md                 # Node input/output interfaces & hidden parameters
-│   ├── algorithm.md                # Mathematical formulas & spatial transformation algorithms
-│   └── prompt_library_plan.md      # Prompt library design specification & status
+│   └── algorithm.md                # Mathematical formulas & spatial transformation algorithms
+
 ├── nodes/                          # Python backend node implementations
 │   ├── __init__.py
 │   ├── advanced_save_image.py      # AdvancedSaveImage (Graph inspection, naming, PNGInfo)
