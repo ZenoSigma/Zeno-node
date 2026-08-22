@@ -20,8 +20,8 @@ A high-performance ComfyUI custom node suite providing 3 production-ready nodes:
   - [`nodes/advanced_save_image.py`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/nodes/advanced_save_image.py)
   - [`nodes/ratio_latent_node.py`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/nodes/ratio_latent_node.py)
   - [`nodes/prompt_library_node.py`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/nodes/prompt_library_node.py)
-- **Frontend Extension:** [`web/prompt_library.js`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/web/prompt_library.js).
-- **Unit Test Suite:** [`tests/test_naming.py`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/tests/test_naming.py), [`tests/test_prompt_library.py`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/tests/test_prompt_library.py).
+- **Frontend Extensions:** [`web/prompt_library.js`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/web/prompt_library.js), [`web/smart_ratio.js`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/web/smart_ratio.js).
+- **Unit Test Suite:** [`tests/test_naming.py`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/tests/test_naming.py), [`tests/test_prompt_library.py`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/tests/test_prompt_library.py), [`tests/test_ratio_latent.py`](file:///e:/Backup/Work/R-D/Tool%20AI/Comfy%20Node/Zeno-node/tests/test_ratio_latent.py).
 
 ---
 

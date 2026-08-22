@@ -1,6 +1,22 @@
 import torch
 import torch.nn.functional as F
-import comfy.model_management
+
+try:
+    import comfy.model_management
+except ImportError:
+    class _MockModelManagement:
+        @staticmethod
+        def intermediate_device():
+            return "cpu"
+
+        @staticmethod
+        def intermediate_dtype():
+            return torch.float32
+
+    class _MockComfy:
+        model_management = _MockModelManagement()
+
+    comfy = _MockComfy()
 
 
 class RatioLatentGenerator:

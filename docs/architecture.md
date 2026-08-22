@@ -66,11 +66,11 @@ graph TD
 | Layer | Files | Responsibilities |
 | :--- | :--- | :--- |
 | **Node Registration** | `__init__.py`, `nodes/__init__.py` | Exports `NODE_CLASS_MAPPINGS`, `NODE_DISPLAY_NAME_MAPPINGS`, and `WEB_DIRECTORY` to ComfyUI node registry. |
-| **Frontend UI Extension** | `web/prompt_library.js` | Interactive slot management widget for ComfyUI canvas, title/prompt fields, dynamic row addition/removal, and workflow JSON synchronization. |
+| **Frontend UI Extensions** | `web/prompt_library.js`, `web/smart_ratio.js` | Interactive slot management widget for PromptLibrary; auto-locking & visual graying of aspect_ratio / swap_dimensions upon input connection for RatioLatentGenerator. |
 | **Prompt Storage & Selection** | `nodes/prompt_library_node.py` | Parses slot JSON array, validates index and prompt content, and emits the selected prompt as a scalar `STRING`. |
 | **Latent Generation & Transforms** | `nodes/ratio_latent_node.py` | Calculates dimensions with VAE-safe rounding (multiples of 32), creates empty latents, and performs tensor transformations (stretch, center crop, letterbox padding). |
 | **Image Saving & Metadata** | `nodes/advanced_save_image.py` | Inspects execution graph, extracts model names, builds sanitized hierarchical filenames, resolves subfolders, preserves workflow metadata in PNGInfo, and plays completion alert. |
-| **Verification & Tests** | `tests/test_naming.py`, `tests/test_prompt_library.py` | Unittest suites verifying graph inspection, filename sanitization, casing normalization, JSON slot parsing, boundary validation, and Unicode preservation. |
+| **Verification & Tests** | `tests/test_naming.py`, `tests/test_prompt_library.py`, `tests/test_ratio_latent.py` | Unittest suites verifying graph inspection, filename sanitization, casing normalization, JSON slot parsing, boundary validation, Unicode preservation, and latent ratio generation. |
 
 ---
 

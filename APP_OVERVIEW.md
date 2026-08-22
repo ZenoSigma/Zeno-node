@@ -46,11 +46,12 @@ Zeno-node/
 - Sanitizes strings: strips extensions, digits (for models), non-alpha characters, and applies `Upper_lower` casing.
 - Generates file paths via `folder_paths.get_save_image_path()`, embeds `prompt` & `extra_pnginfo` into lossless PNG, and sounds an alert chime.
 
-### 3. Smart Ratio Latent Generator (`nodes/ratio_latent_node.py`)
+### 3. Smart Ratio Latent Generator (`nodes/ratio_latent_node.py` + `web/smart_ratio.js`)
 - Calculates optimal longest edge snapped to multiple of 32: $L_{opt} = \text{clamp}(\text{round}(L / 32) \times 32, 1024, 4000)$.
 - Calculates secondary dimension preserving aspect ratio snapped to multiple of 32.
 - Allocates `EMPTY_LATENT` tensor `[B, 4, H // 8, W // 8]` on `intermediate_device()`.
 - Synchronously resizes/crops/letterboxes optional input `IMAGE` and `MASK` tensors.
+- Frontend extension automatically locks and grays out `aspect_ratio` and `swap_dimensions` when an `IMAGE` or `MASK` is connected.
 
 ### 4. Prompt Library Pipeline (`nodes/prompt_library_node.py` + `web/prompt_library.js`)
 - Frontend DOM widget renders a dynamic list of slots (Index badge, Title input, Prompt textarea, Remove button) and Add Slot control.
@@ -65,4 +66,4 @@ All modifications must pass the unit test suite:
 ```bash
 python -m unittest discover tests
 ```
-Current Status: **15 tests passing** (100% success rate).
+Current Status: **20 tests passing** (100% success rate).
