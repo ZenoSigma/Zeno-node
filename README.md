@@ -73,7 +73,8 @@ Zeno-node/
 ├── docs/
 │   ├── architecture.md
 │   ├── api_spec.md
-│   └── algorithm.md
+│   ├── algorithm.md
+│   └── prompt_library_plan.md
 ├── nodes/
 │   ├── __init__.py
 │   ├── advanced_save_image.py
@@ -98,6 +99,7 @@ Detailed architectural specifications and multi-AI development protocols:
 - [Architecture & Data Pipeline](docs/architecture.md) - Pipeline diagrams, layer separation, execution flows.
 - [API & Node Specification](docs/api_spec.md) - Input widgets, hidden parameters, output signatures.
 - [Algorithm & Math Principles](docs/algorithm.md) - VAE-safe snap-to-32 calculations, spatial interpolation transforms.
+- [Prompt Library MVP Plan](docs/prompt_library_plan.md) - Approved scope for the planned scalar prompt-selection node.
 - [AI Operator Guidelines](AGENTS.md) - 6-step AI onboarding sequence, branch management (`feat/`, `fix/`), Conventional Commits.
 
 ---
