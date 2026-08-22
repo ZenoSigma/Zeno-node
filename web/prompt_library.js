@@ -544,7 +544,7 @@ function setupPromptLibraryNode(node) {
                         rowH = rows[idx].offsetHeight;
                     } else {
                         const h = node.promptSlots[idx]?.height || 50;
-                        rowH = h + 54;
+                        rowH = h + 56;
                     }
                     maxRowH = Math.max(maxRowH, rowH);
                 }
@@ -555,12 +555,17 @@ function setupPromptLibraryNode(node) {
             totalGridHeight += (totalGridRows - 1) * 8; // gap between grid rows
         }
 
-        // Exact height: widgets_start_y (35) + toolbar (34) + gap (8) + totalGridHeight + gap (8) + addBtn (32) + buffer (20)
-        const totalNeededHeight = 35 + 34 + 8 + totalGridHeight + 8 + 32 + 20;
+        // Exact required container height:
+        // toolbar (36) + gap (8) + totalGridHeight + bottomPadding (12) + gap (8) + addBtn (34)
+        const toolbarH = toolbar.offsetHeight > 20 ? toolbar.offsetHeight : 36;
+        const addBtnH = addBtn.offsetHeight > 20 ? addBtn.offsetHeight : 34;
+        const exactContainerH = toolbarH + 8 + totalGridHeight + 12 + 8 + addBtnH;
+
+        // LiteGraph node target height = header (35) + exactContainerH + canvas footer/resize margin (32)
+        const targetH = Math.max(200, 35 + exactContainerH + 32);
         const currentW = (node.size && node.size[0]) || 400;
         const minWidthForCols = Math.max(400, cols * 320);
         const targetW = Math.max(minWidthForCols, currentW);
-        const targetH = Math.max(180, totalNeededHeight);
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
@@ -594,6 +599,7 @@ function setupPromptLibraryNode(node) {
         min-height: 0;
         overflow-y: auto;
         padding-right: 4px;
+        padding-bottom: 8px;
         box-sizing: border-box;
     `;
 
@@ -617,7 +623,7 @@ function setupPromptLibraryNode(node) {
     }, { capture: true, passive: false });
 
     const calculateDynamicHeight = () => {
-        if (!node.promptSlots || node.promptSlots.length === 0) return 140;
+        if (!node.promptSlots || node.promptSlots.length === 0) return 160;
         const cols = getColumns();
         const totalSlots = node.promptSlots.length;
         const totalGridRows = Math.ceil(totalSlots / cols);
@@ -630,7 +636,7 @@ function setupPromptLibraryNode(node) {
                 if (idx < totalSlots) {
                     const s = node.promptSlots[idx];
                     const h = (typeof s.height === "number" && s.height > 30) ? s.height : 50;
-                    maxRowH = Math.max(maxRowH, h + 54);
+                    maxRowH = Math.max(maxRowH, h + 56);
                 }
             }
             totalGridHeight += maxRowH;
@@ -639,25 +645,25 @@ function setupPromptLibraryNode(node) {
             totalGridHeight += (totalGridRows - 1) * 8;
         }
 
-        return Math.max(140, 34 + 8 + totalGridHeight + 8 + 32 + 20);
+        return Math.max(160, 36 + 8 + totalGridHeight + 12 + 8 + 34);
     };
 
     const updateDynamicLayout = (size) => {
         const currentH = (size && size[1]) || (node.size && node.size[1]) || 280;
-        const availableH = Math.max(100, currentH - 42);
+        const availableH = Math.max(120, currentH - 67);
         if (domWidget && domWidget.element) {
             domWidget.element.style.height = `${availableH}px`;
         }
     };
 
     const updateNodeBounds = () => {
-        const neededHeight = calculateDynamicHeight();
+        const neededContainerH = calculateDynamicHeight();
         const cols = getColumns();
         const minWidthForCols = Math.max(400, cols * 320);
         const currentW = (node.size && node.size[0]) || 400;
         const currentH = (node.size && node.size[1]) || 280;
         const targetW = Math.max(minWidthForCols, currentW);
-        const targetH = Math.max(currentH, neededHeight + 42);
+        const targetH = Math.max(currentH, 35 + neededContainerH + 32);
 
         if (node.setSize) {
             node.setSize([targetW, targetH]);
@@ -1140,8 +1146,8 @@ function setupPromptLibraryNode(node) {
                 return calculateDynamicHeight();
             },
             getHeight() {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 38);
-                return Math.max(120, currentH - 38);
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 67);
+                return Math.max(120, currentH - 67);
             },
             onResize(size) {
                 updateDynamicLayout(size);
@@ -1156,8 +1162,8 @@ function setupPromptLibraryNode(node) {
                 node.widgets.unshift(domWidget);
             }
             domWidget.computeSize = (width) => {
-                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 38);
-                return [width || 400, Math.max(120, currentH - 38)];
+                const currentH = (node.size && node.size[1]) || (calculateDynamicHeight() + 67);
+                return [width || 400, Math.max(120, currentH - 67)];
             };
         }
     }
