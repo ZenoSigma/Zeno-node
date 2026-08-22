@@ -52,7 +52,7 @@ Zeno-node/
 - Allocates `EMPTY_LATENT` tensor `[B, 4, H // 8, W // 8]` on `intermediate_device()`.
 - Synchronously resizes/crops/letterboxes optional input `IMAGE` and `MASK` tensors.
 
-### 4. Prompt Library Pipeline (`nodes/prompt_library_node.py` + `web/js/prompt_library.js`)
+### 4. Prompt Library Pipeline (`nodes/prompt_library_node.py` + `web/prompt_library.js`)
 - Frontend DOM widget renders a dynamic list of slots (Index badge, Title input, Prompt textarea, Remove button) and Add Slot control.
 - State is serialized into a hidden widget `slots_json` and restored via `onConfigure`.
 - Backend parses JSON, enforces 1-based index boundary ($1 \le k \le N$), rejects blank prompt bodies, and returns the selected prompt scalar string.
@@ -65,4 +65,4 @@ All modifications must pass the unit test suite:
 ```bash
 python -m unittest discover tests
 ```
-Current Status: **14 tests passing** (100% success rate).
+Current Status: **15 tests passing** (100% success rate).

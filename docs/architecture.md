@@ -34,7 +34,7 @@ graph TD
         end
 
         subgraph Prompt Library Pipeline [PromptLibrary]
-            JS[web/js/prompt_library.js UI Widget]
+            JS[web/prompt_library.js UI Widget]
             JP[JSON State & Slot Parser]
             VO[Validation & Scalar STRING Output]
         end
@@ -66,7 +66,7 @@ graph TD
 | Layer | Files | Responsibilities |
 | :--- | :--- | :--- |
 | **Node Registration** | `__init__.py`, `nodes/__init__.py` | Exports `NODE_CLASS_MAPPINGS`, `NODE_DISPLAY_NAME_MAPPINGS`, and `WEB_DIRECTORY` to ComfyUI node registry. |
-| **Frontend UI Extension** | `web/js/prompt_library.js` | Interactive slot management widget for ComfyUI canvas, title/prompt fields, dynamic row addition/removal, and workflow JSON synchronization. |
+| **Frontend UI Extension** | `web/prompt_library.js` | Interactive slot management widget for ComfyUI canvas, title/prompt fields, dynamic row addition/removal, and workflow JSON synchronization. |
 | **Prompt Storage & Selection** | `nodes/prompt_library_node.py` | Parses slot JSON array, validates index and prompt content, and emits the selected prompt as a scalar `STRING`. |
 | **Latent Generation & Transforms** | `nodes/ratio_latent_node.py` | Calculates dimensions with VAE-safe rounding (multiples of 32), creates empty latents, and performs tensor transformations (stretch, center crop, letterbox padding). |
 | **Image Saving & Metadata** | `nodes/advanced_save_image.py` | Inspects execution graph, extracts model names, builds sanitized hierarchical filenames, resolves subfolders, preserves workflow metadata in PNGInfo, and plays completion alert. |
