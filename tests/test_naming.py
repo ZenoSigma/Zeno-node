@@ -22,19 +22,23 @@ class TestNamingAndSanitization(unittest.TestCase):
         self.assertEqual(cleaned, "RealVisXL_V_Lightning")
 
     def test_sanitize_image_name(self):
-        # 1. Strips path and extension, keeps digits
+        # 1. Strips path and extension, keeps digits, fits within 12 chars
         raw1 = "C:\\Users\\user\\Pictures\\portrait_01.png"
         self.assertEqual(sanitize_image_name(raw1), "portrait_01")
 
-        # 2. Handles special characters and multiple spaces/underscores
+        # 2. Handles special characters and truncates to 12 chars
         raw2 = "subfolder/my photo (ver 2) [final].jpg"
-        self.assertEqual(sanitize_image_name(raw2), "my_photo_ver_2_final")
+        self.assertEqual(sanitize_image_name(raw2), "my_photo_ver")
 
-        # 3. Webp and other formats
+        # 3. Truncates long names to 12 chars and strips trailing delimiter
         raw3 = "render_character---03__alt.WEBP"
-        self.assertEqual(sanitize_image_name(raw3), "render_character_03_alt")
+        self.assertEqual(sanitize_image_name(raw3), "render_chara")
 
-        # 4. Empty and None
+        # 4. Strips dangling trailing delimiter when sliced at delimiter boundary
+        raw4 = "concept_art_v2.png" # 12 chars without extension is "concept_art_" -> strips to "concept_art"
+        self.assertEqual(sanitize_image_name(raw4), "concept_art")
+
+        # 5. Empty and None
         self.assertEqual(sanitize_image_name(""), "")
         self.assertEqual(sanitize_image_name(None), "")
 
@@ -106,7 +110,7 @@ class TestNamingAndSanitization(unittest.TestCase):
             }
         }
 
-        # 1. Both image name and model name enabled -> Image name prioritized BEFORE model name
+        # 1. Both image name and model name enabled -> 12-char image name prioritized BEFORE model name
         prefix_both = self.node.build_filename_prefix(
             include_model_name=True,
             include_timestamp=True,
@@ -117,7 +121,7 @@ class TestNamingAndSanitization(unittest.TestCase):
             unique_id="5"
         )
         today = datetime.now().strftime("%Y%m%d")
-        expected_both = f"Character_face_01_realvisxl_v_{today}_portrait_photo"
+        expected_both = f"Character_fa_realvisxl_v_{today}_portrait_photo"
         self.assertEqual(prefix_both, expected_both)
 
         # 2. Only image name enabled (model name disabled)
@@ -130,7 +134,7 @@ class TestNamingAndSanitization(unittest.TestCase):
             include_image_name=True,
             unique_id="5"
         )
-        expected_img_only = f"Character_face_01_{today}_portrait_photo"
+        expected_img_only = f"Character_fa_{today}_portrait_photo"
         self.assertEqual(prefix_img_only, expected_img_only)
 
         # 3. Only model name enabled (include_image_name=False)
@@ -158,7 +162,7 @@ class TestNamingAndSanitization(unittest.TestCase):
             }
         }
         subfolder = self.node.resolve_subfolder("By Input Image Name", "", prompt=mock_prompt, unique_id="2")
-        self.assertEqual(subfolder, "Concept_art_v2")
+        self.assertEqual(subfolder, "Concept_art")
 
 if __name__ == "__main__":
     unittest.main()

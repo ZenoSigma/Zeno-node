@@ -101,7 +101,7 @@ class TestAdvancedSaveImage(unittest.TestCase):
         self.assertIn("images", res["ui"])
         self.assertEqual(len(res["ui"]["images"]), 1)
         saved_fn = res["ui"]["images"][0]["filename"]
-        self.assertTrue(saved_fn.startswith("Test_input_sample_01_test"))
+        self.assertTrue(saved_fn.startswith("Test_input_s_test"))
 
 
 if __name__ == "__main__":

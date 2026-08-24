@@ -255,13 +255,14 @@ def auto_detect_model_name(prompt: dict) -> str:
     return ""
 
 
-def sanitize_image_name(text: str, delimiter: str = DELIMITER) -> str:
+def sanitize_image_name(text: str, delimiter: str = DELIMITER, max_length: int = 12) -> str:
     """
     Sanitize input image filename:
     - Strips directory paths (e.g. 'subfolder/my_image.png' -> 'my_image').
     - Removes image/video file extensions (.png, .jpg, .jpeg, .webp, .bmp, .tiff, .tif, .gif, .avif, etc.).
     - Retains alphanumeric characters, hyphens, and underscores (keeps digits intact).
     - Consolidates delimiters and whitespace.
+    - Limits to the first `max_length` characters (default: 12) to keep filenames clean and concise.
     """
     if not text:
         return ""
@@ -271,6 +272,8 @@ def sanitize_image_name(text: str, delimiter: str = DELIMITER) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     text = text.replace(" ", delimiter)
     text = re.sub(r"[_\-]{2,}", delimiter, text).strip("_- ")
+    if max_length and max_length > 0:
+        text = text[:max_length].rstrip("_- ")
     return text
 
 

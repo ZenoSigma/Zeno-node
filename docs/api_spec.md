@@ -16,7 +16,7 @@ This document defines the complete interface specification, parameter types, hid
 | Parameter | Type | Default | Options / Constraints | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `images` | `IMAGE` | *(required)* | PyTorch Tensor `[B, H, W, C]` | List/batch of images to save and preview. |
-| `include_image_name`| `BOOLEAN` | `False` | `True` / `False` | Automatically detect and prepend input image filename to output filename (prioritized before model name). |
+| `include_image_name`| `BOOLEAN` | `False` | `True` / `False` | Automatically detect and prepend the first 12 characters of the input image filename to the output filename (prioritized before model name). |
 | `include_model_name`| `BOOLEAN` | `True` | `True` / `False` | Prepend auto-detected model name to filename. |
 | `include_timestamp` | `BOOLEAN` | `True` | `True` / `False` | Append current timestamp to filename. |
 | `timestamp_format` | `COMBO` | `%Y%m%d_%H%M%S` | `["%Y%m%d_%H%M%S", "%Y-%m-%d_%H-%M-%S", "%Y%m%d", "%H%M%S"]` | Timestamp pattern string. |

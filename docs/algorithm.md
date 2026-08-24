@@ -109,6 +109,7 @@ Uniformly scales the image to fit entirely within the target viewport and pads r
 1. **Path & Extension Stripping:** `os.path.basename` followed by removal of image/video extensions (`.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.tiff`, `.tif`, `.gif`, `.avif`, `.mp4`, `.mov`, `.mkv`, etc.).
 2. **Character Filtering (Preserving Digits):** Retains alphanumeric characters `[a-zA-Z0-9_\-\s]` so that sequence indices (e.g. `portrait_01`, `frame_0023`) are safely preserved.
 3. **Delimiter Consolidation:** Replaces spaces with delimiters (`_`) and collapses consecutive delimiters (`_{2,}` -> `_`).
+4. **Length Truncation:** Truncates the cleaned image name to the first 12 characters (`text[:12]`) and strips any trailing delimiters (`.rstrip("_- ")`) to prevent overly long filenames.
 
 ### B. Model Name Sanitization (`sanitize_model_name`)
 1. **Path & Extension Stripping:** `os.path.basename` followed by removal of `.safetensors`, `.ckpt`, `.pt`, `.bin`.
