@@ -93,10 +93,12 @@ graph TD
    - Restores tensors to standard ComfyUI shapes.
 
 ### C. Image Saving & Metadata Pipeline
-1. **Graph Inspection:** Scans `PROMPT` dictionary recursively across loader and switch nodes to identify model/checkpoint name.
-2. **Sanitization:** Removes directory paths, file extensions, numeric digits (for model text), and special characters; applies case normalization (capitalizing only the first character).
-3. **Filename Composition:** Concatenates `Model_Timestamp_CustomText`.
-4. **Subfolder Resolution:** Formats subfolder by Date (`YYYY-MM-DD`), Model Name, or Custom string.
+1. **Graph Inspection:** Scans `PROMPT` execution graph recursively (starting upstream from save node ID) to auto-detect both input image filename (e.g. from `LoadImage`, `LoadImagePath`, `VHS_LoadVideo`) and model/checkpoint name.
+2. **Sanitization:**
+   - Input Image Name: Strips directory paths and extensions while preserving alphanumeric characters and digits.
+   - Model Name: Removes directory paths, file extensions, numeric digits (for clean model text), and special characters.
+3. **Filename Composition:** Concatenates `[InputImage]_[Model]_[Timestamp]_[CustomText]` (input image name prioritized before model name).
+4. **Subfolder Resolution:** Formats subfolder by Date (`YYYY-MM-DD`), Model Name, Input Image Name, or Custom string.
 5. **PNG Encoding:** Saves image as 8-bit RGB lossless PNG with compressed PNGInfo containing workflow and prompt metadata.
 6. **Alert Notification:** Invokes platform audio alert upon batch completion.
 

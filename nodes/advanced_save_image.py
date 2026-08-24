@@ -103,6 +103,97 @@ except Exception:
     pass
 
 
+def _extract_image_filename_from_node(class_type: str, inputs: dict) -> str:
+    if not isinstance(inputs, dict):
+        return ""
+
+    loader_classes = {
+        "LoadImage", "LoadImageMask", "LoadImageOutput", "LoadImagePath",
+        "LoadImageFromPath", "CR Load Image", "ImageLoad", "LoadImageMB",
+        "LoadImageProvider", "VHS_LoadVideo", "VHS_LoadImages", "VHS_LoadImagesPath"
+    }
+
+    image_keys = [
+        "image", "image_path", "filename", "file_path", "video",
+        "video_path", "img_name", "input_image", "directory"
+    ]
+
+    if class_type in loader_classes or any(cls in class_type for cls in ["LoadImage", "ImageLoad", "LoadVideo"]):
+        for key in image_keys:
+            val = inputs.get(key)
+            if isinstance(val, str) and val.strip():
+                return val
+
+    for key, val in inputs.items():
+        if isinstance(val, str) and val.strip():
+            val_clean = val.strip()
+            if re.search(r"\.(png|jpg|jpeg|webp|bmp|tiff|tif|gif|avif|mp4|mov|mkv|webm|avi)$", val_clean, re.IGNORECASE):
+                return val_clean
+
+    return ""
+
+
+def auto_detect_image_name(prompt: dict, unique_id: str = None) -> str:
+    """
+    Automatically inspects and extracts the input image filename from the ComfyUI execution graph (prompt dict).
+    Performs upstream graph traversal starting from the current save node when unique_id is available,
+    falling back to scanning image loader nodes across the graph.
+    """
+    if not prompt or not isinstance(prompt, dict):
+        return ""
+
+    # 1. Upstream graph traversal starting from unique_id or save node
+    start_nodes = []
+    if unique_id and str(unique_id) in prompt:
+        start_nodes = [str(unique_id)]
+    else:
+        for node_id, node_data in prompt.items():
+            if isinstance(node_data, dict):
+                ct = node_data.get("class_type", "")
+                if "SaveImage" in ct or "AdvancedSaveImage" in ct:
+                    start_nodes.append(str(node_id))
+
+    if start_nodes:
+        for start_node in start_nodes:
+            queue = [start_node]
+            visited = set()
+            while queue:
+                curr_id = queue.pop(0)
+                if curr_id in visited:
+                    continue
+                visited.add(curr_id)
+
+                node_data = prompt.get(curr_id)
+                if not isinstance(node_data, dict):
+                    continue
+
+                class_type = node_data.get("class_type", "")
+                inputs = node_data.get("inputs", {})
+
+                if curr_id != start_node:
+                    img_name = _extract_image_filename_from_node(class_type, inputs)
+                    if img_name:
+                        return img_name
+
+                if isinstance(inputs, dict):
+                    for k, v in inputs.items():
+                        if isinstance(v, (list, tuple)) and len(v) >= 1 and isinstance(v[0], (str, int)):
+                            up_id = str(v[0])
+                            if up_id not in visited and up_id in prompt:
+                                queue.append(up_id)
+
+    # 2. Fallback: Search all loader nodes in prompt dict
+    for node_id, node_data in prompt.items():
+        if isinstance(node_data, dict):
+            class_type = node_data.get("class_type", "")
+            inputs = node_data.get("inputs", {})
+            img_name = _extract_image_filename_from_node(class_type, inputs)
+            if img_name:
+                return img_name
+
+    return ""
+
+
 def auto_detect_model_name(prompt: dict) -> str:
     """
     Automatically inspects and extracts the Checkpoint/Model name from the ComfyUI execution graph (prompt dict).
@@ -164,6 +255,25 @@ def auto_detect_model_name(prompt: dict) -> str:
     return ""
 
 
+def sanitize_image_name(text: str, delimiter: str = DELIMITER) -> str:
+    """
+    Sanitize input image filename:
+    - Strips directory paths (e.g. 'subfolder/my_image.png' -> 'my_image').
+    - Removes image/video file extensions (.png, .jpg, .jpeg, .webp, .bmp, .tiff, .tif, .gif, .avif, etc.).
+    - Retains alphanumeric characters, hyphens, and underscores (keeps digits intact).
+    - Consolidates delimiters and whitespace.
+    """
+    if not text:
+        return ""
+    text = os.path.basename(text)
+    text = re.sub(r"\.(png|jpg|jpeg|webp|bmp|tiff|tif|gif|avif|mp4|mov|mkv|webm|avi)$", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"[^a-zA-Z0-9_\-\s]", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    text = text.replace(" ", delimiter)
+    text = re.sub(r"[_\-]{2,}", delimiter, text).strip("_- ")
+    return text
+
+
 def sanitize_model_name(text: str, delimiter: str = DELIMITER) -> str:
     """
     Sanitize model names:
@@ -221,14 +331,21 @@ class AdvancedSaveImage:
         return {
             "required": {
                 "images": ("IMAGE", {"tooltip": "List of images to save and preview on the node."}),
-                # 1. Model name (automatically extracted from execution graph)
+                # 1. Input Image name (automatically extracted from upstream LoadImage nodes)
+                "include_image_name": ("BOOLEAN", {
+                    "default": False,
+                    "label_on": "Enable",
+                    "label_off": "Disable",
+                    "tooltip": "Automatically detect and prepend the input image filename to the output filename (prioritized before model name)."
+                }),
+                # 2. Model name (automatically extracted from execution graph)
                 "include_model_name": ("BOOLEAN", {
                     "default": True,
                     "label_on": "Enable",
                     "label_off": "Disable",
                     "tooltip": "Automatically detect and prepend the Model/Checkpoint name to the filename."
                 }),
-                # 2. Timestamp
+                # 3. Timestamp
                 "include_timestamp": ("BOOLEAN", {
                     "default": True,
                     "label_on": "Enable",
@@ -244,7 +361,7 @@ class AdvancedSaveImage:
                     "default": "%Y%m%d_%H%M%S",
                     "tooltip": "Timestamp formatting pattern (e.g. YYYYMMDD_HHMMSS)."
                 }),
-                # 3. User custom text
+                # 4. User custom text
                 "custom_text": ("STRING", {
                     "default": "",
                     "multiline": False,
@@ -256,10 +373,11 @@ class AdvancedSaveImage:
                     "None",
                     "By Date (YYYY-MM-DD)",
                     "By Model Name",
+                    "By Input Image Name",
                     "Custom Subfolder"
                 ], {
                     "default": "None",
-                    "tooltip": "Subfolder organization mode (by date, by model name, or custom subfolder path)."
+                    "tooltip": "Subfolder organization mode (by date, by model name, by input image name, or custom subfolder path)."
                 }),
                 "custom_subfolder": ("STRING", {
                     "default": "",
@@ -271,7 +389,7 @@ class AdvancedSaveImage:
                     "label_off": "No",
                     "tooltip": "Embed prompt and workflow metadata into PNG files for easy reloading."
                 }),
-                # 4. Audio chime
+                # 5. Audio chime
                 "play_sound_on_finish": ("BOOLEAN", {
                     "default": True,
                     "label_on": "Enable",
@@ -297,7 +415,8 @@ class AdvancedSaveImage:
             },
             "hidden": {
                 "prompt": "PROMPT",
-                "extra_pnginfo": "EXTRA_PNGINFO"
+                "extra_pnginfo": "EXTRA_PNGINFO",
+                "unique_id": "UNIQUE_ID"
             },
         }
 
@@ -319,18 +438,28 @@ class AdvancedSaveImage:
         include_timestamp: bool,
         timestamp_format: str,
         custom_text: str,
-        prompt: dict = None
+        prompt: dict = None,
+        include_image_name: bool = False,
+        unique_id: str = None,
+        image_name: str = None
     ) -> str:
         parts = []
 
-        # 1. Model Name (Automatic detection)
+        # 1. Input Image Name (Prioritized before model name)
+        if include_image_name:
+            detected_image = image_name if (image_name and isinstance(image_name, str) and image_name.strip()) else auto_detect_image_name(prompt, unique_id=unique_id)
+            clean_image = sanitize_image_name(detected_image, delimiter=DELIMITER)
+            if clean_image:
+                parts.append(clean_image)
+
+        # 2. Model Name (Automatic detection)
         if include_model_name and prompt is not None:
             detected_model = auto_detect_model_name(prompt)
             clean_model = sanitize_model_name(detected_model, delimiter=DELIMITER)
             if clean_model:
                 parts.append(clean_model)
 
-        # 2. Timestamp
+        # 3. Timestamp
         if include_timestamp:
             try:
                 ts_str = datetime.now().strftime(timestamp_format)
@@ -340,7 +469,7 @@ class AdvancedSaveImage:
             if clean_ts:
                 parts.append(clean_ts)
 
-        # 3. Custom Text
+        # 4. Custom Text
         clean_custom = sanitize_filename_component(custom_text, delimiter=DELIMITER)
         if clean_custom:
             parts.append(clean_custom)
@@ -359,13 +488,17 @@ class AdvancedSaveImage:
 
         return normalize_filename_case(cleaned_prefix)
 
-    def resolve_subfolder(self, subfolder_mode: str, custom_subfolder: str, prompt: dict = None) -> str:
+    def resolve_subfolder(self, subfolder_mode: str, custom_subfolder: str, prompt: dict = None, unique_id: str = None) -> str:
         if subfolder_mode == "By Date (YYYY-MM-DD)":
             return datetime.now().strftime("%Y-%m-%d")
         elif subfolder_mode == "By Model Name":
             detected_model = auto_detect_model_name(prompt) if prompt is not None else ""
             clean_model = sanitize_model_name(detected_model, delimiter=DELIMITER)
             return normalize_filename_case(clean_model) if clean_model else "Default_model"
+        elif subfolder_mode == "By Input Image Name":
+            detected_image = auto_detect_image_name(prompt, unique_id=unique_id) if prompt is not None else ""
+            clean_image = sanitize_image_name(detected_image, delimiter=DELIMITER)
+            return normalize_filename_case(clean_image) if clean_image else "Default_image"
         elif subfolder_mode == "Custom Subfolder":
             if not isinstance(custom_subfolder, str) or custom_subfolder.strip().lower() in ["none", ""]:
                 return ""
@@ -377,6 +510,7 @@ class AdvancedSaveImage:
     def save_images(
         self,
         images,
+        include_image_name=False,
         include_model_name=True,
         include_timestamp=True,
         timestamp_format="%Y%m%d_%H%M%S",
@@ -388,6 +522,7 @@ class AdvancedSaveImage:
         sound_choice="Chimes",
         prompt=None,
         extra_pnginfo=None,
+        unique_id=None,
         **kwargs
     ):
         # 1. Build standardized filename prefix
@@ -396,11 +531,14 @@ class AdvancedSaveImage:
             include_timestamp=include_timestamp,
             timestamp_format=timestamp_format,
             custom_text=custom_text,
-            prompt=prompt
+            prompt=prompt,
+            include_image_name=include_image_name,
+            unique_id=unique_id,
+            image_name=kwargs.get("image_name")
         )
 
         # 2. Resolve subfolder path (automatic fallback for unknown legacy values)
-        subfolder = self.resolve_subfolder(subfolder_mode, custom_subfolder, prompt=prompt)
+        subfolder = self.resolve_subfolder(subfolder_mode, custom_subfolder, prompt=prompt, unique_id=unique_id)
         if subfolder:
             full_prefix = os.path.join(subfolder, filename_prefix)
         else:
@@ -409,6 +547,8 @@ class AdvancedSaveImage:
         # 3. Obtain safe output save path from ComfyUI folder_paths
         full_output_folder, filename, counter, subfolder_res, filename_prefix_res = \
             folder_paths.get_save_image_path(full_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+
+        os.makedirs(full_output_folder, exist_ok=True)
 
         results = []
         saved_file_paths = []

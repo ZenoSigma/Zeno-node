@@ -16,12 +16,14 @@ This document defines the complete interface specification, parameter types, hid
 | Parameter | Type | Default | Options / Constraints | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `images` | `IMAGE` | *(required)* | PyTorch Tensor `[B, H, W, C]` | List/batch of images to save and preview. |
+| `include_image_name`| `BOOLEAN` | `False` | `True` / `False` | Automatically detect and prepend input image filename to output filename (prioritized before model name). |
 | `include_model_name`| `BOOLEAN` | `True` | `True` / `False` | Prepend auto-detected model name to filename. |
 | `include_timestamp` | `BOOLEAN` | `True` | `True` / `False` | Append current timestamp to filename. |
 | `timestamp_format` | `COMBO` | `%Y%m%d_%H%M%S` | `["%Y%m%d_%H%M%S", "%Y-%m-%d_%H-%M-%S", "%Y%m%d", "%H%M%S"]` | Timestamp pattern string. |
 | `custom_text` | `STRING` | `""` | Single-line string | Custom text, notes, or tags to append. |
-| `subfolder_mode` | `COMBO` | `"None"` | `["None", "By Date (YYYY-MM-DD)", "By Model Name", "Custom Subfolder"]` | Target subfolder grouping mode. |
+| `subfolder_mode` | `COMBO` | `"None"` | `["None", "By Date (YYYY-MM-DD)", "By Model Name", "By Input Image Name", "Custom Subfolder"]` | Target subfolder grouping mode. |
 | `custom_subfolder` | `STRING` | `""` | Single-line string | Name/relative path for custom subfolder. |
+| `save_workflow_metadata`| `BOOLEAN` | `True` | `True` / `False` | Embed prompt and workflow metadata into PNG files. |
 | `play_sound_on_finish` | `BOOLEAN` | `True` | `True` / `False` | Play completion audio alert chime. |
 | `sound_choice` | `COMBO` | `"Chimes"` | `["Chimes", "Ding", "Notify", "Tada", "Chord", "Speech On", "Ring", "Windows Default", "Synth Bell", "Asterisk", "Exclamation"]` | Alert chime sound type (with interactive preview button). |
 
@@ -30,6 +32,7 @@ This document defines the complete interface specification, parameter types, hid
 | :--- | :--- | :--- |
 | `prompt` | `PROMPT` | ComfyUI execution graph dictionary containing node definitions and inputs. |
 | `extra_pnginfo` | `EXTRA_PNGINFO` | Workflow graph UI JSON for drag-and-drop reconstruction. |
+| `unique_id` | `UNIQUE_ID` | Node ID of the executing save node for accurate upstream graph traversal. |
 
 ### B. Output Signatures (`RETURN_TYPES`)
 

@@ -89,30 +89,38 @@ Uniformly scales the image to fit entirely within the target viewport and pads r
 
 ---
 
-## 3. 🔍 Execution Graph Traversal & Model Auto-Detection
+## 3. 🔍 Execution Graph Traversal & Auto-Detection
 
-The function `auto_detect_model_name` inspects the ComfyUI execution graph (`prompt` dictionary):
+### A. Input Image Auto-Detection (`auto_detect_image_name`)
+1. **Upstream Graph Traversal:** Starting from the current save node's `unique_id`, performs Breadth-First Search (BFS) backward through input link dependencies to locate the originating image/video loader node.
+2. **Supported Loader Classes:** Inspects standard and community loaders (`LoadImage`, `LoadImageMask`, `LoadImageOutput`, `LoadImagePath`, `LoadImageFromPath`, `CR Load Image`, `ImageLoad`, `VHS_LoadVideo`, `VHS_LoadImages`, `VHS_LoadImagesPath`).
+3. **Fallback Global Sweep:** If disconnected or untracked, scans all nodes in the `prompt` dictionary for image loader class types or string parameters ending in standard media extensions.
 
-1. **Dynamic Checkpoint Switch Traversal:**
-   - Detects `CheckpointSwitch`, `MultiCheckpointLoader`, or `ZenoCheckpointSwitch`.
-   - Checks boolean toggle inputs (`enable_1`, `enable_2`, etc.) and extracts active model strings (`model_1`, `model_2`).
-2. **Dedicated Model Loader Inspection:**
-   - Inspects classes: `CheckpointLoaderSimple`, `CheckpointLoader`, `UNETLoader`, `DiffusionModelLoader`, `DualCLIPLoader`, `ImageOnlyCheckpointLoader`, `unCLIPCheckpointLoader`.
-   - Extracts keys: `ckpt_name`, `unet_name`, `model_name`, `checkpoint`, `ckpt_filename`.
-3. **Fallback Global Sweep:**
-   - Sweeps remaining nodes in `prompt` containing model input keys.
+### B. Model Name Auto-Detection (`auto_detect_model_name`)
+1. **Dynamic Checkpoint Switch Traversal:** Detects `CheckpointSwitch`, `MultiCheckpointLoader`, or `ZenoCheckpointSwitch`, checking boolean toggle inputs (`enable_1`, `enable_2`, etc.) and active model strings.
+2. **Dedicated Model Loader Inspection:** Inspects classes (`CheckpointLoaderSimple`, `CheckpointLoader`, `UNETLoader`, `DiffusionModelLoader`, `DualCLIPLoader`, `ImageOnlyCheckpointLoader`, `unCLIPCheckpointLoader`) for keys (`ckpt_name`, `unet_name`, `model_name`, `checkpoint`, `ckpt_filename`).
+3. **Fallback Global Sweep:** Sweeps remaining nodes in `prompt` containing model input keys.
 
 ---
 
 ## 4. 🔤 Filename Sanitization & Normalization Pipeline
 
+### A. Input Image Name Sanitization (`sanitize_image_name`)
+1. **Path & Extension Stripping:** `os.path.basename` followed by removal of image/video extensions (`.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.tiff`, `.tif`, `.gif`, `.avif`, `.mp4`, `.mov`, `.mkv`, etc.).
+2. **Character Filtering (Preserving Digits):** Retains alphanumeric characters `[a-zA-Z0-9_\-\s]` so that sequence indices (e.g. `portrait_01`, `frame_0023`) are safely preserved.
+3. **Delimiter Consolidation:** Replaces spaces with delimiters (`_`) and collapses consecutive delimiters (`_{2,}` -> `_`).
+
+### B. Model Name Sanitization (`sanitize_model_name`)
 1. **Path & Extension Stripping:** `os.path.basename` followed by removal of `.safetensors`, `.ckpt`, `.pt`, `.bin`.
-2. **Digit & Special Character Filtering (Model Name):**
-   - Strips all numeric digits `\d+` to retain descriptive model alpha names.
-   - Replaces non-alphabetic characters with delimiters (`_`).
-   - Deduplicates consecutive delimiters (`_{2,}` -> `_`).
-3. **Casing Normalization:**
-   - Transforms the assembled string prefix such that only index 0 is uppercase:
+2. **Digit & Special Character Filtering:** Strips all numeric digits `\d+` to retain descriptive alpha names (e.g. `SDXL/RealVisXL_v4.0.safetensors` -> `RealVisXL_V`).
+3. **Delimiter Consolidation:** Replaces spaces and non-alpha characters with `_`.
+
+### C. Assembly & Casing Normalization (`normalize_filename_case`)
+1. Components are concatenated in priority order:
+   \[
+   \text{Prefix} = [\text{InputImage}] \oplus [\text{ModelName}] \oplus [\text{Timestamp}] \oplus [\text{CustomText}]
+   \]
+2. Capitalizes only the very first character (index 0) of the assembled prefix, keeping subsequent characters lowercase:
    \[
    S_{out} = S_{lower}[0].\text{upper}() + S_{lower}[1:]
    \]
