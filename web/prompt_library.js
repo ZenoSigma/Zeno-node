@@ -15,73 +15,6 @@ import {
  * Compatible with ComfyUI 2.0 (Vue-based Nodes) and Classic (LiteGraph Canvas).
  */
 
-/**
- * Single-pass syntax highlighter for JSON and structured Key-Value prompts.
- * Tokenizes text in one pass to prevent HTML tag collisions.
- */
-function escapeHtml(str) {
-    if (!str) return "";
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-}
-
-function highlightPromptText(raw) {
-    if (!raw) return "";
-
-    // Single-pass regex matching tokens without re-processing generated HTML:
-    // 1. Quoted Key + colon: ("key"|'key')\s*(:)
-    // 2. Unquoted Key/Tag + colon: ([A-Za-z0-9_-]+)\s*(:)
-    // 3. Quoted String values: "(?:\\.|[^"\\])*" | '(?:\\.|[^'\\])*'
-    // 4. Numbers / Booleans / Null: \b(true|false|null|-?\d+(?:\.\d+)?)\b
-    // 5. Brackets & Braces: [{}[\]]
-    // 6. Punctuation: [,;]
-    const tokenRegex = /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')\s*(:)|(^|[\n,\{\[])\s*([a-zA-Z0-9_\-]{1,30})(\s*:)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(\b(?:true|false|null|-?\d+(?:\.\d+)?)\b)|([\{\}\[\]\(\)])|([,;])/g;
-
-    let result = "";
-    let lastIndex = 0;
-    let match;
-
-    while ((match = tokenRegex.exec(raw)) !== null) {
-        if (match.index > lastIndex) {
-            result += escapeHtml(raw.slice(lastIndex, match.index));
-        }
-
-        if (match[1] && match[2]) {
-            // Quoted key ("key":)
-            result += `<span style="color: #38bdf8; font-weight: 600;">${escapeHtml(match[1])}</span><span style="color: #94a3b8;">${escapeHtml(match[2])}</span>`;
-        } else if (match[4] && match[5]) {
-            // Unquoted key (key:)
-            const prefix = match[3] ? escapeHtml(match[3]) : "";
-            result += `${prefix}<span style="color: #38bdf8; font-weight: 600;">${escapeHtml(match[4])}</span><span style="color: #94a3b8;">${escapeHtml(match[5])}</span>`;
-        } else if (match[6]) {
-            // String value ("value")
-            result += `<span style="color: #a7f3d0;">${escapeHtml(match[6])}</span>`;
-        } else if (match[7]) {
-            // Number / Boolean / Null
-            result += `<span style="color: #fbbf24; font-weight: 600;">${escapeHtml(match[7])}</span>`;
-        } else if (match[8]) {
-            // Brackets & Braces ({ } [ ])
-            result += `<span style="color: #f97316; font-weight: bold;">${escapeHtml(match[8])}</span>`;
-        } else if (match[9]) {
-            // Punctuation (, ;)
-            result += `<span style="color: #94a3b8;">${escapeHtml(match[9])}</span>`;
-        }
-
-        lastIndex = tokenRegex.lastIndex;
-    }
-
-    if (lastIndex < raw.length) {
-        result += escapeHtml(raw.slice(lastIndex));
-    }
-
-    if (raw.endsWith("\n")) {
-        result += "<br/> ";
-    }
-
-    return result;
-}
 
 const STORAGE_WIDGET_STYLE_ID = "zeno-prompt-library-storage-widget-style";
 
@@ -818,7 +751,7 @@ function setupPromptLibraryNode(node) {
             topBar.appendChild(expandBtn);
             topBar.appendChild(removeBtn);
 
-            // Multiline prompt editor wrapper (dual-layer for JSON & structured prompt syntax highlighting)
+            // Multiline prompt editor wrapper
             const editorWrapper = document.createElement("div");
             editorWrapper.className = "zeno-editor-wrapper";
             editorWrapper.style.cssText = `
@@ -829,31 +762,6 @@ function setupPromptLibraryNode(node) {
                 border: 1px solid ${isActive ? "rgba(56, 189, 248, 0.5)" : "#333336"};
                 border-radius: 4px;
                 overflow: hidden;
-            `;
-
-            const backdrop = document.createElement("div");
-            backdrop.className = "zeno-editor-backdrop";
-            backdrop.style.cssText = `
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                width: 100%;
-                height: 100%;
-                box-sizing: border-box;
-                padding: 6px 8px;
-                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-                font-size: 11px;
-                line-height: 1.45;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                word-break: break-word;
-                color: #e2e8f0;
-                pointer-events: none;
-                overflow: hidden;
-                tab-size: 2;
-                z-index: 1;
             `;
 
             const promptTextarea = document.createElement("textarea");
@@ -869,7 +777,7 @@ function setupPromptLibraryNode(node) {
                 background: transparent;
                 border: none;
                 outline: none;
-                color: transparent;
+                color: #e2e8f0;
                 caret-color: #38bdf8;
                 padding: 6px 8px;
                 font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -881,25 +789,11 @@ function setupPromptLibraryNode(node) {
                 resize: vertical;
                 min-height: 48px;
                 tab-size: 2;
-                z-index: 2;
                 display: block;
             `;
             if (typeof slot.height === "number" && slot.height > 30) {
                 promptTextarea.style.height = `${slot.height}px`;
             }
-
-            const syncHighlight = () => {
-                backdrop.innerHTML = highlightPromptText(promptTextarea.value);
-                backdrop.scrollTop = promptTextarea.scrollTop;
-                backdrop.scrollLeft = promptTextarea.scrollLeft;
-            };
-
-            promptTextarea.addEventListener("input", syncHighlight);
-            promptTextarea.addEventListener("scroll", () => {
-                backdrop.scrollTop = promptTextarea.scrollTop;
-                backdrop.scrollLeft = promptTextarea.scrollLeft;
-            });
-            syncHighlight();
 
             // Expand / Collapse button click logic
             expandBtn.addEventListener("click", (e) => {
@@ -924,7 +818,6 @@ function setupPromptLibraryNode(node) {
                 }
 
                 updateExpandBtnVisual();
-                syncHighlight();
                 syncToWidget();
                 updateNodeBounds();
             });
@@ -939,7 +832,6 @@ function setupPromptLibraryNode(node) {
                     const canScrollUp = e.deltaY < 0 && promptTextarea.scrollTop > 0.5;
                     if (canScrollDown || canScrollUp) {
                         promptTextarea.scrollTop += e.deltaY;
-                        backdrop.scrollTop = promptTextarea.scrollTop;
                         return;
                     }
                 }
@@ -960,7 +852,6 @@ function setupPromptLibraryNode(node) {
                     slot.height = fitHeight;
                     updateNodeBounds();
                 }
-                syncHighlight();
                 syncToWidget();
             });
 
@@ -972,7 +863,6 @@ function setupPromptLibraryNode(node) {
                     slot.savedHeight = currentH;
                     slot.isExpanded = false;
                     updateExpandBtnVisual();
-                    syncHighlight();
                     syncToWidget();
                     updateNodeBounds();
                 }
@@ -989,14 +879,12 @@ function setupPromptLibraryNode(node) {
                     if (currentH > 35 && currentH !== slot.height) {
                         slot.height = currentH;
                         slot.savedHeight = currentH;
-                        syncHighlight();
                         syncToWidget();
                     }
                 });
                 ro.observe(promptTextarea);
             }
 
-            editorWrapper.appendChild(backdrop);
             editorWrapper.appendChild(promptTextarea);
 
             row.appendChild(topBar);
