@@ -433,7 +433,15 @@ function setupPromptLibraryNode(node) {
     colsGroup.appendChild(colsInput);
     colsGroup.appendChild(incColsBtn);
 
-    // 3) Fit Button (Fits node size to current slots without resetting any slot sizes)
+    // 3) Actions Group: Fit Button & Default Size Button
+    const actionsGroup = document.createElement("div");
+    actionsGroup.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    `;
+
+    // Fit Button (Fits node size to current slots without resetting any slot sizes)
     const fitBtn = document.createElement("button");
     fitBtn.innerText = "⛶ Fit Size";
     fitBtn.title = "Tự động căn chỉnh kích thước node vừa khít các ô prompt hiện tại (không reset kích thước các ô)";
@@ -451,6 +459,7 @@ function setupPromptLibraryNode(node) {
         gap: 4px;
         transition: all 0.15s ease;
         line-height: 1;
+        white-space: nowrap;
     `;
     fitBtn.addEventListener("mouseenter", () => {
         fitBtn.style.background = "#0284c7";
@@ -461,6 +470,37 @@ function setupPromptLibraryNode(node) {
         fitBtn.style.background = "rgba(56, 189, 248, 0.12)";
         fitBtn.style.borderColor = "rgba(56, 189, 248, 0.35)";
         fitBtn.style.color = "#38bdf8";
+    });
+
+    // Default Size Button (Resets all prompt slots to default size)
+    const defaultBtn = document.createElement("button");
+    defaultBtn.innerText = "↺ Default Size";
+    defaultBtn.title = "Khôi phục tất cả các ô prompt về kích thước mặc định và căn chỉnh lại kích thước node";
+    defaultBtn.style.cssText = `
+        background: rgba(148, 163, 184, 0.12);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        color: #94a3b8;
+        border-radius: 4px;
+        cursor: pointer;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.15s ease;
+        line-height: 1;
+        white-space: nowrap;
+    `;
+    defaultBtn.addEventListener("mouseenter", () => {
+        defaultBtn.style.background = "#475569";
+        defaultBtn.style.borderColor = "#94a3b8";
+        defaultBtn.style.color = "#ffffff";
+    });
+    defaultBtn.addEventListener("mouseleave", () => {
+        defaultBtn.style.background = "rgba(148, 163, 184, 0.12)";
+        defaultBtn.style.borderColor = "rgba(148, 163, 184, 0.35)";
+        defaultBtn.style.color = "#94a3b8";
     });
 
     const fitNodeToContent = () => {
@@ -496,15 +536,56 @@ function setupPromptLibraryNode(node) {
         }
     };
 
+    const resetToDefaultSize = () => {
+        node.promptSlots.forEach((slot) => {
+            delete slot.height;
+            delete slot.savedHeight;
+            slot.isExpanded = false;
+        });
+        syncToWidget();
+        renderSlots(false);
+
+        const cols = getColumns();
+        const rows = Array.from(listContainer.querySelectorAll(".zeno-slot-row"));
+        const exactContainerH = calculateContainerHeight({
+            slotTextHeights: node.promptSlots.map((slot) => slot.height),
+            measuredSlotHeights: rows.map((row) => measureUnscaledElementHeight(row)),
+            columns: cols,
+            toolbarHeight: measureUnscaledElementHeight(toolbar),
+            addButtonHeight: measureUnscaledElementHeight(addBtn),
+        });
+
+        const targetH = calculateNodeHeight(exactContainerH);
+        const currentW = (node.size && node.size[0]) || 400;
+        const targetW = calculateNodeWidth(currentW, cols);
+
+        if (node.setSize) {
+            node.setSize([targetW, targetH]);
+        }
+        updateDynamicLayout([targetW, targetH]);
+        if (node.setDirtyCanvas) {
+            node.setDirtyCanvas(true, true);
+        }
+    };
+
     fitBtn.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         fitNodeToContent();
     });
 
+    defaultBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resetToDefaultSize();
+    });
+
+    actionsGroup.appendChild(fitBtn);
+    actionsGroup.appendChild(defaultBtn);
+
     toolbar.appendChild(indexGroup);
     toolbar.appendChild(colsGroup);
-    toolbar.appendChild(fitBtn);
+    toolbar.appendChild(actionsGroup);
 
     const listContainer = document.createElement("div");
     listContainer.className = "zeno-prompt-slots-list";
@@ -579,14 +660,16 @@ function setupPromptLibraryNode(node) {
         }
     };
 
-    const renderSlots = () => {
-        // Save current DOM heights of any active textareas before clearing
-        const existingTextareas = listContainer.querySelectorAll("textarea");
-        existingTextareas.forEach((ta, idx) => {
-            if (node.promptSlots[idx] && ta.offsetHeight > 35) {
-                node.promptSlots[idx].height = ta.offsetHeight;
-            }
-        });
+    const renderSlots = (preserveDomHeights = true) => {
+        if (preserveDomHeights) {
+            // Save current DOM heights of any active textareas before clearing
+            const existingTextareas = listContainer.querySelectorAll("textarea");
+            existingTextareas.forEach((ta, idx) => {
+                if (node.promptSlots[idx] && ta.offsetHeight > 35) {
+                    node.promptSlots[idx].height = ta.offsetHeight;
+                }
+            });
+        }
 
         listContainer.innerHTML = "";
         const activeIndex = getSelectedIndex();
@@ -1062,6 +1145,14 @@ function setupPromptLibraryNode(node) {
         renderSlots();
         syncToWidget();
         updateNodeBounds();
+    };
+
+    node.__zeno_reset_default_size = () => {
+        resetToDefaultSize();
+    };
+
+    node.__zeno_fit_to_content = () => {
+        fitNodeToContent();
     };
 
     node.__zeno_update_layout = (size) => {

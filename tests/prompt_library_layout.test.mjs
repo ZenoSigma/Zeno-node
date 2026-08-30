@@ -103,3 +103,18 @@ test("storage widgets are removed from layout without disabling serialization", 
     assert.equal(widget.serialize, undefined);
     assert.equal(widget.element.style.display, "none");
 });
+
+test("default slot sizes calculate expected container and node bounds", () => {
+    const containerHeight = calculateContainerHeight({
+        slotTextHeights: [undefined, undefined],
+        columns: 1,
+        toolbarHeight: 36,
+        addButtonHeight: 34,
+    });
+    const nodeHeight = calculateNodeHeight(containerHeight);
+    const widgetHeight = calculateDomWidgetHeight(nodeHeight);
+
+    assert.ok(nodeHeight >= PROMPT_LIBRARY_LAYOUT.MIN_NODE_HEIGHT);
+    assert.equal(widgetHeight, containerHeight);
+});
+
