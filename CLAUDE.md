@@ -8,7 +8,7 @@ Guidelines and operational protocols for Claude Code when working on **Zeno-node
 
 Follow this strict 6-step sequential reading order before writing code:
 
-1. **Step 1 - Rules & Boundaries:** `AGENTS.md` / `CLAUDE.md` (Strict invariants, error handling preservation, branch rules).
+1. **Step 1 - Rules & Live Status:** `STATUS.md` -> `AGENTS.md` / `CLAUDE.md` (Strict invariants, current phase, error handling preservation, branch rules).
 2. **Step 2 - Architecture & Specs:** `docs/architecture.md`, `docs/api_spec.md`, and `docs/algorithm.md` (Data pipelines, tensor dimensions).
 3. **Step 3 - Dependencies & Config:** `requirements.txt` and `pyproject.toml`.
 4. **Step 4 - Entrypoint:** `__init__.py` and `nodes/__init__.py`.

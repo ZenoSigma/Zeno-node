@@ -8,7 +8,7 @@ Guidelines and architectural specifications for AI agents, developers, and contr
 
 When an AI agent or contributor starts working on this repository, you **MUST** read files in the following strict sequential order:
 
-1. **Step 1 - Rules & Boundaries:** Read `AGENTS.md` / `CLAUDE.md` / `.cursorrules` (Never delete try/except blocks, never commit directly to `main`, always create feature branches).
+1. **Step 1 - Rules & Live Status:** Read `STATUS.md` -> `AGENTS.md` / `CLAUDE.md` / `.cursorrules` (Review current status, node invariants, never delete try/except blocks, never commit directly to `main`).
 2. **Step 2 - Architecture & Data Flow:** Read `docs/architecture.md`, `docs/api_spec.md`, and `docs/algorithm.md` (Understand tensor shapes and data pipelines before writing code).
 3. **Step 3 - Dependencies & Config:** Read `requirements.txt` and `pyproject.toml`.
 4. **Step 4 - Entrypoint & Node Mappings:** Read `__init__.py` and `nodes/__init__.py`.

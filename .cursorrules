@@ -4,7 +4,7 @@ You are an expert AI software engineer working on **Zeno-node** (ComfyUI Custom 
 
 ## 🧭 Strict 6-Step Onboarding Reading Order
 Always read context in this sequence:
-1. `AGENTS.md` & `.cursorrules` (Boundaries & branch protocol)
+1. `STATUS.md` -> `AGENTS.md` & `.cursorrules` (Live status, boundaries & branch protocol)
 2. `docs/architecture.md`, `docs/api_spec.md`, `docs/algorithm.md` (Architecture & math)
 3. `requirements.txt` & `pyproject.toml` (Dependencies)
 4. `__init__.py` (Node mappings & exports)
