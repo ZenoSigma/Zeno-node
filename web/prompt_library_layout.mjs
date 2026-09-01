@@ -148,6 +148,30 @@ export function calculateNodeWidth(currentWidth, columns) {
     return Math.max(minWidth, positiveNumber(currentWidth, PROMPT_LIBRARY_LAYOUT.MIN_NODE_WIDTH));
 }
 
+export function shouldPassThroughKeyEvent(e) {
+    if (!e) return false;
+    const isModifier = Boolean(e.ctrlKey || e.metaKey);
+    const key = (e.key || "").toLowerCase();
+    const code = e.code || "";
+
+    // Allow global ComfyUI shortcut combinations to bubble to window:
+    // - Ctrl+S / Cmd+S (Save workflow)
+    // - Ctrl+Shift+S (Save workflow as...)
+    // - Ctrl+Enter / Cmd+Enter (Queue Prompt)
+    if (isModifier && (key === "s" || code === "KeyS" || key === "enter" || code === "Enter" || code === "NumpadEnter")) {
+        return true;
+    }
+
+    return false;
+}
+
+export function handleInputKeydown(e) {
+    if (shouldPassThroughKeyEvent(e)) {
+        return;
+    }
+    e.stopPropagation();
+}
+
 export function hideWidgetFromLayout(widget) {
     if (!widget) return;
 
@@ -167,3 +191,4 @@ export function hideWidgetFromLayout(widget) {
         widget.element.style.padding = "0px";
     }
 }
+

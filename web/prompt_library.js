@@ -5,6 +5,7 @@ import {
     calculateDomWidgetHeight,
     calculateNodeHeight,
     calculateNodeWidth,
+    handleInputKeydown,
     hideWidgetFromLayout,
     measureUnscaledElementHeight,
 } from "./prompt_library_layout.mjs";
@@ -126,6 +127,7 @@ function setupPromptLibraryNode(node) {
         flex-direction: column;
         gap: 8px;
         width: 100%;
+        max-width: 100%;
         height: 100%;
         box-sizing: border-box;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -135,6 +137,7 @@ function setupPromptLibraryNode(node) {
         margin: 0;
         pointer-events: auto;
         user-select: text;
+        overflow-x: hidden;
     `;
 
     container.setAttribute("data-capture-wheel", "true");
@@ -150,11 +153,12 @@ function setupPromptLibraryNode(node) {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
+        gap: 6px;
+        flex-wrap: wrap;
         background: rgba(20, 24, 33, 0.75);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 6px;
-        padding: 5px 8px;
+        padding: 4px 6px;
         box-sizing: border-box;
         flex-shrink: 0;
     `;
@@ -164,11 +168,13 @@ function setupPromptLibraryNode(node) {
     indexGroup.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
+        flex-shrink: 0;
     `;
 
     const indexLabel = document.createElement("span");
-    indexLabel.innerText = "Selected Slot:";
+    indexLabel.innerText = "Slot:";
+    indexLabel.title = "Selected Output Slot (Slot xuất dữ liệu)";
     indexLabel.style.cssText = `
         font-weight: 600;
         font-size: 11px;
@@ -178,19 +184,19 @@ function setupPromptLibraryNode(node) {
 
     const decBtn = document.createElement("button");
     decBtn.innerText = "−";
-    decBtn.title = "Previous slot";
+    decBtn.title = "Previous slot (Slot trước)";
     decBtn.style.cssText = `
         background: #1e293b;
         border: 1px solid #334155;
         color: #f1f5f9;
         border-radius: 4px;
         cursor: pointer;
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: bold;
         line-height: 1;
         padding: 0;
@@ -211,38 +217,38 @@ function setupPromptLibraryNode(node) {
     indexInput.value = getSelectedIndex();
     indexInput.setAttribute("data-capture-wheel", "true");
     indexInput.style.cssText = `
-        width: 42px;
-        height: 22px;
+        width: 32px;
+        height: 20px;
         background: #0f172a;
         border: 1px solid #38bdf8;
         border-radius: 4px;
         color: #38bdf8;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 700;
         text-align: center;
         outline: none;
         box-sizing: border-box;
-        padding: 0 2px;
+        padding: 0 1px;
         -moz-appearance: textfield;
     `;
-    indexInput.addEventListener("keydown", (e) => e.stopPropagation());
+    indexInput.addEventListener("keydown", handleInputKeydown);
     indexInput.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
 
     const incBtn = document.createElement("button");
     incBtn.innerText = "+";
-    incBtn.title = "Next slot";
+    incBtn.title = "Next slot (Slot kế tiếp)";
     incBtn.style.cssText = `
         background: #1e293b;
         border: 1px solid #334155;
         color: #f1f5f9;
         border-radius: 4px;
         cursor: pointer;
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: bold;
         line-height: 1;
         padding: 0;
@@ -307,7 +313,8 @@ function setupPromptLibraryNode(node) {
     colsGroup.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
+        flex-shrink: 0;
     `;
 
     const colsLabel = document.createElement("span");
@@ -329,12 +336,12 @@ function setupPromptLibraryNode(node) {
         color: #f1f5f9;
         border-radius: 4px;
         cursor: pointer;
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: bold;
         line-height: 1;
         padding: 0;
@@ -357,21 +364,21 @@ function setupPromptLibraryNode(node) {
     colsInput.setAttribute("data-capture-wheel", "true");
     colsInput.title = "Số cột hiển thị (Columns)";
     colsInput.style.cssText = `
-        width: 36px;
-        height: 22px;
+        width: 28px;
+        height: 20px;
         background: #0f172a;
         border: 1px solid rgba(56, 189, 248, 0.5);
         border-radius: 4px;
         color: #38bdf8;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 700;
         text-align: center;
         outline: none;
         box-sizing: border-box;
-        padding: 0 2px;
+        padding: 0 1px;
         -moz-appearance: textfield;
     `;
-    colsInput.addEventListener("keydown", (e) => e.stopPropagation());
+    colsInput.addEventListener("keydown", handleInputKeydown);
     colsInput.addEventListener("wheel", (e) => e.stopPropagation(), { passive: false });
 
     const incColsBtn = document.createElement("button");
@@ -383,12 +390,12 @@ function setupPromptLibraryNode(node) {
         color: #f1f5f9;
         border-radius: 4px;
         cursor: pointer;
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: bold;
         line-height: 1;
         padding: 0;
@@ -438,28 +445,31 @@ function setupPromptLibraryNode(node) {
     actionsGroup.style.cssText = `
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
+        flex-shrink: 0;
     `;
 
     // Fit Button (Fits node size to current slots without resetting any slot sizes)
     const fitBtn = document.createElement("button");
-    fitBtn.innerText = "⛶ Fit Size";
-    fitBtn.title = "Tự động căn chỉnh kích thước node vừa khít các ô prompt hiện tại (không reset kích thước các ô)";
+    fitBtn.innerText = "⛶ Fit";
+    fitBtn.title = "Fit Size: Tự động căn chỉnh kích thước node vừa khít các ô prompt hiện tại (không reset kích thước các ô)";
     fitBtn.style.cssText = `
         background: rgba(56, 189, 248, 0.12);
         border: 1px solid rgba(56, 189, 248, 0.35);
         color: #38bdf8;
         border-radius: 4px;
         cursor: pointer;
-        padding: 3px 8px;
+        padding: 2px 6px;
+        height: 20px;
         font-size: 11px;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
         transition: all 0.15s ease;
         line-height: 1;
         white-space: nowrap;
+        box-sizing: border-box;
     `;
     fitBtn.addEventListener("mouseenter", () => {
         fitBtn.style.background = "#0284c7";
@@ -474,23 +484,25 @@ function setupPromptLibraryNode(node) {
 
     // Default Size Button (Resets all prompt slots to default size)
     const defaultBtn = document.createElement("button");
-    defaultBtn.innerText = "↺ Default Size";
-    defaultBtn.title = "Khôi phục tất cả các ô prompt về kích thước mặc định và căn chỉnh lại kích thước node";
+    defaultBtn.innerText = "↺ Default";
+    defaultBtn.title = "Default Size: Khôi phục tất cả các ô prompt về kích thước mặc định và căn chỉnh lại kích thước node";
     defaultBtn.style.cssText = `
         background: rgba(148, 163, 184, 0.12);
         border: 1px solid rgba(148, 163, 184, 0.35);
         color: #94a3b8;
         border-radius: 4px;
         cursor: pointer;
-        padding: 3px 8px;
+        padding: 2px 6px;
+        height: 20px;
         font-size: 11px;
         font-weight: 600;
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
         transition: all 0.15s ease;
         line-height: 1;
         white-space: nowrap;
+        box-sizing: border-box;
     `;
     defaultBtn.addEventListener("mouseenter", () => {
         defaultBtn.style.background = "#475569";
@@ -746,7 +758,7 @@ function setupPromptLibraryNode(node) {
                 outline: none;
                 box-sizing: border-box;
             `;
-            titleInput.addEventListener("keydown", (e) => e.stopPropagation());
+            titleInput.addEventListener("keydown", handleInputKeydown);
             titleInput.addEventListener("wheel", (e) => {
                 e.stopPropagation();
                 e.preventDefault();
@@ -924,7 +936,7 @@ function setupPromptLibraryNode(node) {
             // Isolate pointerdown/mousedown inside textarea
             promptTextarea.addEventListener("mousedown", (e) => e.stopPropagation());
             promptTextarea.addEventListener("pointerdown", (e) => e.stopPropagation());
-            promptTextarea.addEventListener("keydown", (e) => e.stopPropagation());
+            promptTextarea.addEventListener("keydown", handleInputKeydown);
 
             promptTextarea.addEventListener("input", (e) => {
                 slot.prompt = e.target.value;
