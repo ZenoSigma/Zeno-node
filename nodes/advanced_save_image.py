@@ -336,7 +336,7 @@ class AdvancedSaveImage:
                 "images": ("IMAGE", {"tooltip": "List of images to save and preview on the node."}),
                 # 1. Input Image name (automatically extracted from upstream LoadImage nodes)
                 "include_image_name": ("BOOLEAN", {
-                    "default": False,
+                    "default": True,
                     "label_on": "Enable",
                     "label_off": "Disable",
                     "tooltip": "Automatically detect and prepend the input image filename to the output filename (prioritized before model name)."
@@ -513,7 +513,7 @@ class AdvancedSaveImage:
     def save_images(
         self,
         images,
-        include_image_name=False,
+        include_image_name=True,
         include_model_name=True,
         include_timestamp=True,
         timestamp_format="%Y%m%d_%H%M%S",

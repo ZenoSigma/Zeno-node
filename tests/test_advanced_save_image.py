@@ -66,7 +66,7 @@ class TestAdvancedSaveImage(unittest.TestCase):
         self.assertIn("include_image_name", required)
         img_flag = required["include_image_name"]
         self.assertEqual(img_flag[0], "BOOLEAN")
-        self.assertEqual(img_flag[1].get("default"), False)
+        self.assertEqual(img_flag[1].get("default"), True)
 
         # Verify subfolder_mode contains By Input Image Name
         self.assertIn("subfolder_mode", required)

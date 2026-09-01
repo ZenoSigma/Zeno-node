@@ -108,11 +108,34 @@ function triggerTestSound(soundChoice) {
     playSynthesizedSound(sound);
 }
 
+function isTestSoundWidget(w) {
+    return Boolean(
+        w && (
+            w.__zeno_test_btn ||
+            w.name === "test_alert_sound" ||
+            w.name === "🔊 Test Sound" ||
+            w.label === "🔊 Test Sound" ||
+            w.value === "test_alert_sound" ||
+            (typeof w.name === "string" && w.name.includes("Test Sound")) ||
+            (typeof w.label === "string" && w.label.includes("Test Sound"))
+        )
+    );
+}
+
 function attachSoundWidgets(node) {
     if (!node || !node.widgets) return;
 
-    // Check if test button already exists
-    const hasTestBtn = node.widgets.some((w) => w.name === "test_alert_sound");
+    // Deduplicate: Clean up any existing duplicate test buttons
+    const testBtns = node.widgets.filter(isTestSoundWidget);
+    if (testBtns.length > 1) {
+        for (let i = 1; i < testBtns.length; i++) {
+            const idx = node.widgets.indexOf(testBtns[i]);
+            if (idx !== -1) {
+                node.widgets.splice(idx, 1);
+            }
+        }
+    }
+
     const soundWidget = node.widgets.find((w) => w.name === "sound_choice");
 
     // Hook change listener on sound_choice dropdown to auto-preview on change
@@ -126,12 +149,17 @@ function attachSoundWidgets(node) {
         };
     }
 
+    const hasTestBtn = node.widgets.some(isTestSoundWidget);
+
     // Add explicit "🔊 Test Sound" button widget if not yet added
     if (!hasTestBtn && node.addWidget) {
-        node.addWidget("button", "🔊 Test Sound", "test_alert_sound", () => {
+        const btn = node.addWidget("button", "🔊 Test Sound", "test_alert_sound", () => {
             const currentSound = soundWidget ? soundWidget.value : "Chimes";
             triggerTestSound(currentSound);
         });
+        if (btn) {
+            btn.__zeno_test_btn = true;
+        }
         if (node.setSize && node.size) {
             node.setSize([node.size[0], node.computeSize ? node.computeSize()[1] : node.size[1]]);
         }
